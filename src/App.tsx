@@ -10,7 +10,8 @@ export function App() {
           className="brand-row"
           data-tauri-drag-region
           onPointerDown={(event) => {
-            void startDragFromPointer(event, () => getCurrentWindow().startDragging());
+            void startDragFromPointer(event, () => getCurrentWindow().startDragging())
+              .catch((error) => console.error('InputMore window drag failed', error));
           }}
         >
           <span className="brand-mark" aria-hidden="true">✦</span>
