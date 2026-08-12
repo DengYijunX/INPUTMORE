@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
 import { reduce } from './state/sessionMachine';
+import { toSessionEvent } from './application/shortcutEvents';
 import { startDragFromPointer } from './presentation/windowDrag';
 
 export function App() {
@@ -14,13 +15,10 @@ export function App() {
 
     let unlisten: (() => void) | undefined;
     void listen<{ action: 'enhance'; phase: 'pressed' | 'released' }>('inputmore://shortcut', (event) => {
-      if (event.payload.phase === 'pressed') {
-        setState((current) => reduce(current, {
-          type: 'shortcut',
-          action: event.payload.action,
-          durationMs: 0,
-        }));
-      }
+      setState((current) => {
+        const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
+        return sessionEvent ? reduce(current, sessionEvent) : current;
+      });
     }).then((cleanup) => {
       unlisten = cleanup;
     });
@@ -45,9 +43,13 @@ export function App() {
         </div>
         <div className="status-row">
           <span className="status-icon" aria-hidden="true">◌</span>
-          <span role="status">{state.tag === 'recording' ? '正在录音' : '就绪'}</span>
+          <span role="status">
+            {state.tag === 'recording' ? '正在录音' : state.tag === 'transcribing' ? '正在识别' : '就绪'}
+          </span>
         </div>
-        <p className="hint">{state.tag === 'recording' ? '再次按快捷键结束' : 'Ctrl + Shift + Space 开始优化转写'}</p>
+        <p className="hint">
+          {state.tag === 'recording' ? '再次按快捷键结束' : state.tag === 'transcribing' ? '正在准备转写' : 'Ctrl + Shift + Space 开始优化转写'}
+        </p>
       </section>
     </main>
   );
