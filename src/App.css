@@ -1,0 +1,91 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f7f7fb;
+  background: transparent;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: transparent;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app-shell {
+  min-height: 180px;
+  padding: 18px;
+}
+
+.floating-card {
+  min-height: 144px;
+  padding: 20px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(30, 31, 45, 0.97), rgba(17, 18, 29, 0.96));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.brand-row,
+.status-row {
+  display: flex;
+  align-items: center;
+}
+
+.brand-row {
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.brand-mark {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 7px;
+  color: #fff;
+  background: linear-gradient(135deg, #7c5cff, #26c6da);
+  font-size: 12px;
+}
+
+.ready-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #5ee6a8;
+  box-shadow: 0 0 10px rgba(94, 230, 168, 0.7);
+}
+
+.status-row {
+  gap: 10px;
+  margin-top: 24px;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.status-icon {
+  color: #9c8aff;
+  font-size: 26px;
+}
+
+.hint {
+  margin: 8px 0 0 36px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 12px;
+}
