@@ -4,7 +4,7 @@ export function App() {
   return (
     <main className="app-shell" aria-label="InputMore">
       <section className="floating-card">
-        <div className="brand-row">
+        <div className="brand-row" data-tauri-drag-region>
           <span className="brand-mark" aria-hidden="true">✦</span>
           <span className="brand-name">InputMore</span>
           <span className="ready-dot" aria-hidden="true" />

@@ -24,18 +24,28 @@ body {
 }
 
 .app-shell {
+  width: 100%;
   min-height: 180px;
-  padding: 18px;
+  padding: 10px;
 }
 
 .floating-card {
-  min-height: 144px;
+  min-height: 160px;
   padding: 20px 22px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 22px;
   background: linear-gradient(145deg, rgba(30, 31, 45, 0.97), rgba(17, 18, 29, 0.96));
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(18px);
+}
+
+.brand-row {
+  cursor: grab;
+  user-select: none;
+}
+
+.brand-row:active {
+  cursor: grabbing;
 }
 
 .brand-row,
