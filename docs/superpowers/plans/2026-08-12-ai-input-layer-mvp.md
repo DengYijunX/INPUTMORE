@@ -4,7 +4,7 @@
 
 **Goal:** Build a Windows desktop MVP that turns spoken input into lightly polished text, writes it back to the active application, and provides separate Translation and Ask actions through a shared model Provider interface.
 
-**Architecture:** Use a Tauri 2 desktop shell with a React/TypeScript floating window and a Rust native bridge. The frontend owns the visible state machine and task presentation; Rust owns global shortcuts, active-window snapshots, clipboard/input injection, and permission-aware OS integration. A small application core separates `Action`, `TransformRequest`, `Provider`, transcription, and write-back so the UI does not depend on a specific model vendor.
+**Architecture:** Use a Tauri 2 desktop shell with a React/TypeScript floating window and a Rust native bridge. Organize the application around domain rules, application use cases, capability ports, and infrastructure adapters: `presentation` emits user events, `application` orchestrates use cases, `domain` owns pure state/policy, `capabilities` exposes reusable AI operations, and `infrastructure`/Tauri adapters implement providers and OS integration. No UI or use case imports a concrete LLM, ASR, search, or Windows API implementation.
 
 **Tech Stack:** Tauri 2, Rust, React, TypeScript, Vite, Vitest, Rust unit tests, Web Audio/MediaRecorder, an OpenAI-compatible HTTP client, Windows UI Automation/send-input integration, and clipboard fallback.
 
@@ -19,17 +19,11 @@ Create the following focused units:
 - `src/domain/requests.ts`: request/result contracts shared by UI and service adapters.
 - `src/state/sessionMachine.ts`: pure transition function for the floating-window state machine.
 - `src/state/sessionMachine.test.ts`: exhaustive transition tests.
-- `src/services/transformer.ts`: action-to-transform orchestration.
-- `src/services/provider.ts`: model Provider interface and failure types.
-- `src/services/openaiCompatibleProvider.ts`: configurable OpenAI-compatible implementation.
-- `src/services/transcription.ts`: audio upload contract and transcription adapter.
-- `src/components/FloatingWindow.tsx`: state-driven floating window.
-- `src/components/StatusView.tsx`: compact status rendering.
-- `src/components/AskInput.tsx`: typed/pasted/recorded Ask input.
-- `src/settings/config.ts`: validated local Provider and shortcut configuration.
-- `src-tauri/src/shortcuts.rs`: global shortcut registration and event bridge.
-- `src-tauri/src/context.rs`: active application/selection snapshot.
-- `src-tauri/src/writeback.rs`: insertion, replacement, clipboard fallback, and undo snapshot.
+- `src/application/`: user-facing use cases and session orchestration.
+- `src/capabilities/`: reusable transcription, text transformation, answering, retrieval, and write-back ports.
+- `src/infrastructure/`: Provider implementations, configuration, storage, and logging adapters.
+- `src/presentation/`: state-driven floating-window components.
+- `src-tauri/src/adapters/`: global shortcuts, active-window context, write-back, clipboard, and microphone bridges.
 - `src-tauri/src/lib.rs`: Tauri command/event registration.
 - `tests/e2e/`: Playwright or Webdriver smoke scenarios for the UI shell.
 
@@ -184,15 +178,18 @@ git add src/App.tsx src/components
 git commit -m "feat: add state-driven floating window"
 ```
 
-## Task 4: Implement the Provider and transformation services
+## Task 4: Implement capability ports and the Provider adapter
 
 **Files:**
-- Create: `src/services/provider.ts`
-- Create: `src/services/openaiCompatibleProvider.ts`
-- Create: `src/services/transformer.ts`
-- Create: `src/settings/config.ts`
-- Test: `src/services/transformer.test.ts`
-- Test: `src/services/openaiCompatibleProvider.test.ts`
+- Create: `src/capabilities/text/TextTransformer.ts`
+- Create: `src/capabilities/text/TextTransformationService.ts`
+- Create: `src/capabilities/answering/Answerer.ts`
+- Create: `src/capabilities/retrieval/AnsweringPolicy.ts`
+- Create: `src/infrastructure/providers/llm/LlmProvider.ts`
+- Create: `src/infrastructure/providers/llm/OpenAICompatibleLlm.ts`
+- Create: `src/infrastructure/config/ConfigStore.ts`
+- Test: `src/capabilities/text/TextTransformationService.test.ts`
+- Test: `src/infrastructure/providers/llm/OpenAICompatibleLlm.test.ts`
 
 - [ ] **Step 1: Write transformation tests with a fake Provider**
 
@@ -200,15 +197,15 @@ Test that `enhance` sends a conservative optimization prompt, `translate` includ
 
 - [ ] **Step 2: Run focused tests to verify failure**
 
-Run: `npm test -- --run src/services/transformer.test.ts src/services/openaiCompatibleProvider.test.ts`
+Run: `npm test -- --run src/capabilities/text/TextTransformationService.test.ts src/infrastructure/providers/llm/OpenAICompatibleLlm.test.ts`
 
 Expected: FAIL because the service contracts are absent.
 
 - [ ] **Step 3: Define the Provider interface**
 
 ```ts
-export interface Provider {
-  generate(request: ProviderRequest, signal?: AbortSignal): Promise<ProviderResponse>;
+export interface LlmProvider {
+  generate(request: LlmRequest, signal?: AbortSignal): Promise<LlmResponse>;
 }
 ```
 
@@ -228,25 +225,30 @@ Store `baseUrl`, `apiKey`, `model`, and action shortcuts in the platform-appropr
 
 - [ ] **Step 7: Run tests**
 
-Run: `npm test -- --run src/services/transformer.test.ts src/services/openaiCompatibleProvider.test.ts`
+Run: `npm test -- --run src/capabilities/text/TextTransformationService.test.ts src/infrastructure/providers/llm/OpenAICompatibleLlm.test.ts`
 
 Expected: PASS, including malformed response, timeout, and unauthorized response tests.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/services src/settings
+git add src/capabilities src/infrastructure
 git commit -m "feat: add unified text transformer and provider"
 ```
 
-## Task 5: Add audio capture and transcription integration
+## Task 5: Add application use cases and audio capture/transcription ports
 
 **Files:**
-- Create: `src/services/audioCapture.ts`
-- Create: `src/services/transcription.ts`
+- Create: `src/application/enhanceTranscription.ts`
+- Create: `src/application/translateText.ts`
+- Create: `src/application/askQuestion.ts`
+- Create: `src/capabilities/transcription/Transcriber.ts`
+- Create: `src/capabilities/transcription/TranscriptionService.ts`
+- Create: `src/infrastructure/audio/audioCapture.ts`
+- Create: `src/infrastructure/providers/asr/AsrProvider.ts`
 - Modify: `src/App.tsx`
-- Test: `src/services/audioCapture.test.ts`
-- Test: `src/services/transcription.test.ts`
+- Test: `src/infrastructure/audio/audioCapture.test.ts`
+- Test: `src/capabilities/transcription/TranscriptionService.test.ts`
 
 - [ ] **Step 1: Write tests for capture lifecycle**
 
@@ -254,7 +256,7 @@ Test start/stop produces a non-empty audio blob, stop is idempotent, cancellatio
 
 - [ ] **Step 2: Run tests to verify failure**
 
-Run: `npm test -- --run src/services/audioCapture.test.ts src/services/transcription.test.ts`
+Run: `npm test -- --run src/infrastructure/audio/audioCapture.test.ts src/capabilities/transcription/TranscriptionService.test.ts`
 
 Expected: FAIL because capture and transcription adapters are missing.
 
@@ -279,16 +281,17 @@ Expected: PASS and successful build.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/services/audioCapture.ts src/services/transcription.ts src/App.tsx
+git add src/application src/capabilities/transcription src/infrastructure/audio src/infrastructure/providers/asr src/App.tsx
 git commit -m "feat: add microphone capture and transcription flow"
 ```
 
-## Task 6: Implement Windows shortcuts, context capture, and write-back
+## Task 6: Implement Windows shortcut, context, and write-back adapters
 
 **Files:**
-- Create: `src-tauri/src/shortcuts.rs`
-- Create: `src-tauri/src/context.rs`
-- Create: `src-tauri/src/writeback.rs`
+- Create: `src-tauri/src/adapters/shortcuts.rs`
+- Create: `src-tauri/src/adapters/active_window.rs`
+- Create: `src-tauri/src/adapters/writeback.rs`
+- Create: `src-tauri/src/adapters/clipboard.rs`
 - Modify: `src-tauri/src/lib.rs`
 - Test: `src-tauri/src/writeback.rs` unit tests
 
@@ -335,9 +338,9 @@ git commit -m "feat: add Windows shortcuts and write-back bridge"
 
 **Files:**
 - Modify: `src/App.tsx`
-- Create: `src/services/sessionController.ts`
+- Create: `src/application/sessionController.ts`
 - Modify: `src/state/sessionMachine.ts`
-- Test: `src/services/sessionController.test.ts`
+- Test: `src/application/sessionController.test.ts`
 
 - [ ] **Step 1: Write controller tests**
 
@@ -345,7 +348,7 @@ Test complete flows for enhance, translate, and Ask using fake recorder, transcr
 
 - [ ] **Step 2: Run tests to verify failure**
 
-Run: `npm test -- --run src/services/sessionController.test.ts`
+Run: `npm test -- --run src/application/sessionController.test.ts`
 
 Expected: FAIL because the controller is missing.
 
@@ -366,7 +369,7 @@ Expected: all unit and component tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/App.tsx src/services/sessionController.ts src/state/sessionMachine.ts
+git add src/App.tsx src/application/sessionController.ts src/state/sessionMachine.ts
 git commit -m "feat: integrate input actions and recovery"
 ```
 
