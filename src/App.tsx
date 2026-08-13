@@ -20,6 +20,7 @@ import { ProcessingIndicator } from './presentation/ProcessingIndicator';
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
@@ -43,6 +44,7 @@ export function App() {
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
+    setPreviewExpanded(false);
     setState({ tag: 'idle' });
   };
 
@@ -53,10 +55,10 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
-    const height = state.tag === 'previewing' ? 190 : 90;
-    void getCurrentWindow().setSize(new LogicalSize(state.tag === 'previewing' ? 420 : 380, height))
+    const height = state.tag === 'previewing' ? (previewExpanded ? 260 : 150) : 90;
+    void getCurrentWindow().setSize(new LogicalSize(420, height))
       .catch((error) => console.error('InputMore window resize failed', error));
-  }, [state.tag]);
+  }, [state.tag, previewExpanded]);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -153,8 +155,16 @@ export function App() {
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
-        {state.tag === 'previewing' && <div className="preview-content"><p className="preview-text">{state.text}</p><p className="preview-hint">文本已整理，当前版本尚未写回输入框</p></div>}
       </section>
+      {state.tag === 'previewing' && (
+        <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
+          <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>
+            <span>整理结果</span><span className="preview-toggle">{previewExpanded ? '收起' : '展开'}⌄</span>
+          </button>
+          <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
+          {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
+        </section>
+      )}
     </main>
   );
 }
