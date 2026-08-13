@@ -57,9 +57,12 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
-    const height = state.tag === 'previewing' ? (previewExpanded ? 260 : 154) : 90;
-    void getCurrentWindow().setSize(new LogicalSize(380, height))
-      .catch((error) => console.error('InputMore window resize failed', error));
+    const frame = requestAnimationFrame(() => {
+      const contentHeight = Math.ceil(document.documentElement.scrollHeight);
+      void getCurrentWindow().setSize(new LogicalSize(380, Math.max(90, contentHeight)))
+        .catch((error) => console.error('InputMore window resize failed', error));
+    });
+    return () => cancelAnimationFrame(frame);
   }, [state.tag, previewExpanded]);
 
   useEffect(() => {

@@ -17,7 +17,7 @@ body { overflow: hidden; }
   border: 1px solid rgba(211, 201, 187, 0.5);
   border-radius: 999px;
   background: rgba(78, 74, 67, 0.76);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
   backdrop-filter: blur(16px) saturate(0.8);
   color: #f7f2e9;
   transition: min-width 180ms ease, background 180ms ease, box-shadow 180ms ease;
@@ -26,7 +26,7 @@ body { overflow: hidden; }
 .floating-card[data-theme='light'] {
   border-color: rgba(170, 157, 139, 0.44);
   background: rgba(242, 237, 229, 0.78);
-  box-shadow: 0 8px 22px rgba(103, 91, 75, 0.18);
+  box-shadow: none;
   color: #35322f;
 }
 
@@ -74,7 +74,7 @@ body { overflow: hidden; }
 .settings-section input, .settings-section select { min-height: 38px; border: 1px solid #d6cbbc; border-radius: 9px; padding: 8px 10px; color: #3d3934; background: rgba(255,255,255,.72); font: inherit; font-weight: 400; }
 .settings-section .save-button { width: max-content; padding: 10px 18px; }
 .settings-section.muted { opacity: .72; }
-.preview-panel { width: 100%; margin-top: 8px; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 10px 14px 12px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18); backdrop-filter: blur(16px) saturate(0.8); }
+.preview-panel { width: 100%; margin-top: 8px; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 10px 14px 12px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); box-shadow: none; backdrop-filter: blur(16px) saturate(0.8); }
 .preview-panel-header { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 0; padding: 0 0 7px; color: inherit; background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 650; }
 .preview-panel-header span:last-child { opacity: .7; }
 .preview-text { max-height: 34px; margin: 0; overflow: hidden; color: currentColor; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
