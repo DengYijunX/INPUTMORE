@@ -1,6 +1,6 @@
 import './App.css';
 import { useEffect, useRef, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
 import { reduce } from './state/sessionMachine';
@@ -50,6 +50,13 @@ export function App() {
     const saved = loadAsrConfig();
     if (saved) transcriptionRef.current = new TranscriptionService(createAsrProvider(saved));
   }, []);
+
+  useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    const height = state.tag === 'previewing' ? 190 : 90;
+    void getCurrentWindow().setSize(new LogicalSize(state.tag === 'previewing' ? 420 : 380, height))
+      .catch((error) => console.error('InputMore window resize failed', error));
+  }, [state.tag]);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
