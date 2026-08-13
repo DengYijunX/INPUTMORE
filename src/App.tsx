@@ -67,7 +67,10 @@ export function App() {
         if (!card || resizing) return;
         const contentHeight = Math.ceil(card.getBoundingClientRect().height + 20);
         resizing = true;
-        void getCurrentWindow().setSize(new LogicalSize(380, Math.max(90, contentHeight)))
+        const windowHandle = getCurrentWindow();
+        void windowHandle.setResizable(true)
+          .then(() => windowHandle.setSize(new LogicalSize(380, Math.max(90, contentHeight))))
+          .then(() => windowHandle.setResizable(false))
           .catch((error) => console.error('InputMore window resize failed', error))
           .finally(() => { resizing = false; });
       });
