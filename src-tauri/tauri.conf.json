@@ -14,8 +14,8 @@
       {
         "label": "main",
         "title": "InputMore",
-        "width": 420,
-        "height": 180,
+        "width": 380,
+        "height": 90,
         "resizable": false,
         "decorations": false,
         "alwaysOnTop": true,

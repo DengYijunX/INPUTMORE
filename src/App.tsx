@@ -9,6 +9,16 @@ import { startDragFromPointer } from './presentation/windowDrag';
 
 export function App() {
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(prefers-color-scheme: light)');
+    if (!media) return;
+    const update = () => setTheme(media.matches ? 'light' : 'dark');
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
@@ -28,28 +38,23 @@ export function App() {
 
   return (
     <main className="app-shell" aria-label="InputMore">
-      <section className="floating-card">
+      <section className="floating-card" data-testid="capsule" data-state={state.tag === 'transcribing' ? 'processing' : state.tag} data-theme={theme}>
         <div
-          className="brand-row"
+          className="capsule-content"
           data-tauri-drag-region
           onPointerDown={(event) => {
             void startDragFromPointer(event, () => getCurrentWindow().startDragging())
               .catch((error) => console.error('InputMore window drag failed', error));
           }}
         >
-          <span className="brand-mark" aria-hidden="true">✦</span>
-          <span className="brand-name">InputMore</span>
-          <span className="ready-dot" aria-hidden="true" />
-        </div>
-        <div className="status-row">
-          <span className="status-icon" aria-hidden="true">◌</span>
-          <span role="status">
-            {state.tag === 'recording' ? '正在录音' : state.tag === 'transcribing' ? '正在识别' : '就绪'}
+          <span className="mic-icon" aria-hidden="true">♩</span>
+          {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
+          {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
+          <span className="capsule-status" role="status">
+            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : 'READY'}
           </span>
+          {(state.tag === 'transcribing' || state.tag === 'processing') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => setState({ tag: 'idle' })}>×</button>}
         </div>
-        <p className="hint">
-          {state.tag === 'recording' ? '再次按快捷键结束' : state.tag === 'transcribing' ? '正在准备转写' : 'Ctrl + Shift + Space 开始优化转写'}
-        </p>
       </section>
     </main>
   );
