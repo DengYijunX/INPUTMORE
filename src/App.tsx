@@ -8,7 +8,7 @@ import { toSessionEvent } from './application/shortcutEvents';
 import { startDragFromPointer } from './presentation/windowDrag';
 import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
-import { OpenAICompatibleAsr } from './infrastructure/providers/asr/OpenAICompatibleAsr';
+import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
 import { loadAsrConfig } from './infrastructure/config/providerConfig';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
@@ -45,7 +45,7 @@ export function App() {
 
   useEffect(() => {
     const saved = loadAsrConfig();
-    if (saved) transcriptionRef.current = new TranscriptionService(new OpenAICompatibleAsr(saved));
+    if (saved) transcriptionRef.current = new TranscriptionService(createAsrProvider(saved));
   }, []);
 
   useEffect(() => {
@@ -87,8 +87,12 @@ export function App() {
         setState(reduce(current, sessionEvent));
         const controller = new AbortController();
         processingAbortRef.current = controller;
+        const savedConfig = loadAsrConfig();
+        const transcription = savedConfig
+          ? new TranscriptionService(createAsrProvider(savedConfig))
+          : transcriptionRef.current;
         void captureRef.current?.stop()
-          .then((audio) => transcriptionRef.current.transcribe(audio, controller.signal))
+          .then((audio) => transcription.transcribe(audio, controller.signal))
           .then(() => {
             processingAbortRef.current = undefined;
             setState({ tag: 'error', action: 'enhance', message: '转录完成，但文本处理尚未接入', retryable: false });

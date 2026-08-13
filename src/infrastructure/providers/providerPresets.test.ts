@@ -11,7 +11,7 @@ describe('provider presets', () => {
   });
 
   it('keeps the existing OpenAI-compatible ASR presets available', () => {
-    expect(PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr')).toHaveLength(3);
+    expect(PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr')).toHaveLength(4);
     expect(getProviderPreset('groq-whisper')?.baseUrl).toContain('/openai/v1');
   });
 
@@ -20,6 +20,12 @@ describe('provider presets', () => {
       kind: 'asr',
       defaultModel: 'paraformer-realtime-v2',
       requiresWorkspaceId: true,
+    });
+  });
+
+  it('describes the Qwen3 ASR Flash HTTP-compatible preset', () => {
+    expect(getProviderPreset('qwen3-asr-flash')).toMatchObject({
+      kind: 'asr', defaultModel: 'qwen3-asr-flash', requiresWorkspaceId: true,
     });
   });
 });

@@ -5,7 +5,7 @@ import { loadAsrConfig, saveAsrConfig, type AsrConfig } from './infrastructure/c
 
 export function SettingsPage() {
   const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
-    providerId: 'aliyun-paraformer', baseUrl: 'wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference', model: 'paraformer-realtime-v2', apiKey: '', workspaceId: '',
+    providerId: 'qwen3-asr-flash', baseUrl: 'https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1', model: 'qwen3-asr-flash', apiKey: '', workspaceId: '',
   });
   const [saved, setSaved] = useState(false);
   const updateProvider = (providerId: string) => {

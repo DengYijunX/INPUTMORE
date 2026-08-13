@@ -10,6 +10,15 @@ export type ProviderPreset = {
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
+    id: 'qwen3-asr-flash',
+    name: '通义千问 Qwen3-ASR Flash',
+    kind: 'asr',
+    baseUrl: 'https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen3-asr-flash',
+    notes: '非实时 HTTP，适合说完一段后一次性转写',
+    requiresWorkspaceId: true,
+  },
+  {
     id: 'aliyun-paraformer',
     name: '阿里云 Paraformer',
     kind: 'asr',
