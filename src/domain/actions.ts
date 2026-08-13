@@ -7,6 +7,7 @@ export type SessionState =
   | { tag: 'processing'; action: Action; requestId: string }
   | { tag: 'writingBack'; action: 'enhance' | 'translate'; text: string }
   | { tag: 'showingAnswer'; text: string; requestId: string }
+  | { tag: 'previewing'; action: 'enhance' | 'translate'; text: string }
   | { tag: 'completed'; action: Action; undoId?: string }
   | { tag: 'error'; action?: Action; message: string; retryable: boolean };
 

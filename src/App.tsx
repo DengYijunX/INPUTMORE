@@ -10,6 +10,9 @@ import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
 import { loadAsrConfig } from './infrastructure/config/providerConfig';
+import { loadLlmConfig } from './infrastructure/config/providerConfig';
+import { OpenAICompatibleLlm } from './infrastructure/providers/llm/OpenAICompatibleLlm';
+import { TextTransformationService } from './capabilities/text/TextTransformationService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
@@ -93,9 +96,16 @@ export function App() {
           : transcriptionRef.current;
         void captureRef.current?.stop()
           .then((audio) => transcription.transcribe(audio, controller.signal))
-          .then(() => {
+          .then((transcript) => {
+            const llmConfig = loadLlmConfig();
+            if (!llmConfig) throw new Error('文本处理服务未配置，请在设置中配置 LLM Provider');
+            setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
+            const transformer = new TextTransformationService(new OpenAICompatibleLlm(llmConfig), llmConfig.model);
+            return transformer.transform({ action: 'enhance', sourceText: transcript.text }, controller.signal);
+          })
+          .then((result) => {
             processingAbortRef.current = undefined;
-            setState({ tag: 'error', action: 'enhance', message: '转录完成，但文本处理尚未接入', retryable: false });
+            setState({ tag: 'previewing', action: 'enhance', text: result.text });
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
@@ -129,13 +139,14 @@ export function App() {
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
+            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
           {(state.tag === 'transcribing' || state.tag === 'processing') && <ProcessingIndicator />}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
-          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
+          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
+        {state.tag === 'previewing' && <div className="preview-content"><p className="preview-text">{state.text}</p><p className="preview-hint">文本已整理，当前版本尚未写回输入框</p></div>}
       </section>
     </main>
   );

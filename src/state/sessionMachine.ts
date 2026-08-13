@@ -61,6 +61,9 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
       }
       return state;
 
+    case 'previewing':
+      return state;
+
     case 'error':
       if (event.type === 'shortcut' && state.retryable) {
         return { tag: 'recording', action: event.action, startedAt: Date.now() };

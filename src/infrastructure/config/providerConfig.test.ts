@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearAsrConfig, loadAsrConfig, saveAsrConfig, type AsrConfig } from './providerConfig';
+import { clearAsrConfig, clearLlmConfig, loadAsrConfig, loadLlmConfig, saveAsrConfig, saveLlmConfig, type AsrConfig, type LlmConfig } from './providerConfig';
 
 describe('provider config storage', () => {
   it('round-trips the ASR configuration without changing it', () => {
@@ -20,5 +20,13 @@ describe('provider config storage', () => {
     saveAsrConfig({ providerId: 'openai-transcribe', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini-transcribe', apiKey: 'secret' });
     clearAsrConfig();
     expect(loadAsrConfig()).toBeUndefined();
+  });
+
+  it('round-trips the LLM configuration separately from ASR', () => {
+    const config: LlmConfig = { providerId: 'deepseek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash', apiKey: 'secret' };
+    saveLlmConfig(config);
+    expect(loadLlmConfig()).toEqual(config);
+    clearLlmConfig();
+    expect(loadLlmConfig()).toBeUndefined();
   });
 });
