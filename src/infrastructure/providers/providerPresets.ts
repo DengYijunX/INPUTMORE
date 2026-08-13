@@ -5,9 +5,19 @@ export type ProviderPreset = {
   baseUrl: string;
   defaultModel: string;
   notes: string;
+  requiresWorkspaceId?: boolean;
 };
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
+  {
+    id: 'aliyun-paraformer',
+    name: '阿里云 Paraformer',
+    kind: 'asr',
+    baseUrl: 'wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference',
+    defaultModel: 'paraformer-realtime-v2',
+    notes: '国内中文实时语音识别，需要北京地域 Workspace ID',
+    requiresWorkspaceId: true,
+  },
   {
     id: 'deepseek',
     name: 'DeepSeek',

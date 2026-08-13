@@ -10,8 +10,16 @@ describe('provider presets', () => {
     });
   });
 
-  it('keeps ASR presets OpenAI-compatible for the first MVP', () => {
-    expect(PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr')).toHaveLength(2);
+  it('keeps the existing OpenAI-compatible ASR presets available', () => {
+    expect(PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr')).toHaveLength(3);
     expect(getProviderPreset('groq-whisper')?.baseUrl).toContain('/openai/v1');
+  });
+
+  it('describes the Alibaba Paraformer workspace requirement', () => {
+    expect(getProviderPreset('aliyun-paraformer')).toMatchObject({
+      kind: 'asr',
+      defaultModel: 'paraformer-realtime-v2',
+      requiresWorkspaceId: true,
+    });
   });
 });

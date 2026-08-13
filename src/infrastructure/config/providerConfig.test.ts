@@ -8,6 +8,7 @@ describe('provider config storage', () => {
       baseUrl: 'https://api.groq.com/openai/v1',
       model: 'whisper-large-v3-turbo',
       apiKey: 'secret',
+      workspaceId: '',
     };
 
     saveAsrConfig(config);

@@ -5,6 +5,7 @@ export type AsrConfig = {
   baseUrl: string;
   model: string;
   apiKey: string;
+  workspaceId?: string;
 };
 
 export function loadAsrConfig(): AsrConfig | undefined {

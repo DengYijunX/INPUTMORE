@@ -5,7 +5,7 @@ import { loadAsrConfig, saveAsrConfig, type AsrConfig } from './infrastructure/c
 
 export function SettingsPage() {
   const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
-    providerId: 'groq-whisper', baseUrl: 'https://api.groq.com/openai/v1', model: 'whisper-large-v3-turbo', apiKey: '',
+    providerId: 'aliyun-paraformer', baseUrl: 'wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference', model: 'paraformer-realtime-v2', apiKey: '', workspaceId: '',
   });
   const [saved, setSaved] = useState(false);
   const updateProvider = (providerId: string) => {
@@ -18,6 +18,7 @@ export function SettingsPage() {
       <form onSubmit={(event) => { event.preventDefault(); saveAsrConfig(asrConfig); setSaved(true); }}>
         <label>Provider<select value={asrConfig.providerId} onChange={(event) => updateProvider(event.target.value)}>{PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr').map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
         <label>API 地址<input value={asrConfig.baseUrl} onChange={(event) => setAsrConfig({ ...asrConfig, baseUrl: event.target.value })} /></label>
+        {getProviderPreset(asrConfig.providerId)?.requiresWorkspaceId && <label>Workspace ID<input value={asrConfig.workspaceId ?? ''} onChange={(event) => setAsrConfig({ ...asrConfig, workspaceId: event.target.value })} placeholder="北京地域 Workspace ID" /></label>}
         <label>模型<input value={asrConfig.model} onChange={(event) => setAsrConfig({ ...asrConfig, model: event.target.value })} /></label>
         <label>API Key<input type="password" value={asrConfig.apiKey} onChange={(event) => setAsrConfig({ ...asrConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
         <button className="save-button" type="submit">{saved ? '已保存' : '保存配置'}</button>
