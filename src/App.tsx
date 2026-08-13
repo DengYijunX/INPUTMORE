@@ -1,7 +1,7 @@
 import './App.css';
 import { useEffect, useRef, useState } from 'react';
-import { getCurrentWindow, PhysicalPosition, LogicalSize } from '@tauri-apps/api/window';
-import { emit, listen } from '@tauri-apps/api/event';
+import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
 import { reduce } from './state/sessionMachine';
 import { toSessionEvent } from './application/shortcutEvents';
@@ -16,15 +16,11 @@ import { TextTransformationService } from './capabilities/text/TextTransformatio
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
-import { PreviewPage } from './PreviewPage';
-
-const PREVIEW_WIDTH = 420;
-const PREVIEW_GAP = 8;
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
-  if (new URLSearchParams(window.location.search).get('window') === 'preview') return <PreviewPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
@@ -45,54 +41,12 @@ export function App() {
     settings.once('tauri://error', (event) => console.error('InputMore settings window failed', event));
   };
 
-  const getPreviewPosition = async () => {
-    const mainWindow = getCurrentWindow();
-    const position = await mainWindow.outerPosition();
-    const size = await mainWindow.outerSize();
-    return new PhysicalPosition(
-      position.x + Math.max(0, Math.round((size.width - PREVIEW_WIDTH) / 2)),
-      position.y + size.height + PREVIEW_GAP,
-    );
-  };
-
-  const syncPreviewPosition = async () => {
-    if (!('__TAURI_INTERNALS__' in window)) return;
-    const preview = await WebviewWindow.getByLabel('preview');
-    if (!preview) return;
-    await preview.setPosition(await getPreviewPosition());
-  };
-
-  const closePreviewWindow = async () => {
-    const preview = await WebviewWindow.getByLabel('preview');
-    if (preview) await preview.close();
-  };
-
-  const openPreviewWindow = async (text: string) => {
-    if (!('__TAURI_INTERNALS__' in window)) return;
-    localStorage.setItem('inputmore.preview.text', text);
-    const position = await getPreviewPosition();
-    const existing = await WebviewWindow.getByLabel('preview');
-    if (existing) {
-      await existing.setPosition(position);
-      await existing.show();
-      await existing.setFocus();
-      await emit('inputmore://preview', { text });
-      return;
-    }
-    const preview = new WebviewWindow('preview', {
-      url: 'index.html?window=preview', title: 'InputMore 结果', width: PREVIEW_WIDTH, height: 108, x: position.x, y: position.y,
-      resizable: false, decorations: false, alwaysOnTop: true, transparent: true, backgroundColor: '#00000000', shadow: false,
-    });
-    preview.once('tauri://created', () => void emit('inputmore://preview', { text }));
-    preview.once('tauri://error', (event) => console.error('InputMore preview window failed', event));
-  };
-
   const cancelCurrentTask = () => {
     sessionVersionRef.current += 1;
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
-    void closePreviewWindow().catch((error) => console.error('InputMore preview close failed', error));
+    setPreviewExpanded(false);
     setState({ tag: 'idle' });
   };
 
@@ -103,19 +57,10 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
-    void getCurrentWindow().setSize(new LogicalSize(380, 90))
+    const height = state.tag === 'previewing' ? (previewExpanded ? 260 : 154) : 90;
+    void getCurrentWindow().setSize(new LogicalSize(380, height))
       .catch((error) => console.error('InputMore window resize failed', error));
-  }, [state.tag]);
-
-  useEffect(() => {
-    if (!('__TAURI_INTERNALS__' in window)) return;
-    let unlisten: (() => void) | undefined;
-    const mainWindow = getCurrentWindow();
-    void mainWindow.onMoved(() => {
-      void syncPreviewPosition().catch((error) => console.error('InputMore preview position sync failed', error));
-    }).then((cleanup) => { unlisten = cleanup; });
-    return () => unlisten?.();
-  }, []);
+  }, [state.tag, previewExpanded]);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -174,8 +119,8 @@ export function App() {
           .then((result) => {
             if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
             processingAbortRef.current = undefined;
+            setPreviewExpanded(false);
             setState({ tag: 'previewing', action: 'enhance', text: result.text });
-            void openPreviewWindow(result.text);
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
@@ -216,6 +161,15 @@ export function App() {
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
+        {state.tag === 'previewing' && (
+          <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
+            <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>
+              <span>整理结果</span><span>{previewExpanded ? '收起⌃' : '展开⌄'}</span>
+            </button>
+            <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
+            {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
+          </section>
+        )}
       </section>
     </main>
   );
