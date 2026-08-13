@@ -8,15 +8,42 @@ import { toSessionEvent } from './application/shortcutEvents';
 import { startDragFromPointer } from './presentation/windowDrag';
 import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
+import { OpenAICompatibleAsr } from './infrastructure/providers/asr/OpenAICompatibleAsr';
+import { getProviderPreset, PROVIDER_PRESETS } from './infrastructure/providers/providerPresets';
+import { loadAsrConfig, saveAsrConfig, type AsrConfig } from './infrastructure/config/providerConfig';
 
 export function App() {
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
+    providerId: 'groq-whisper',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'whisper-large-v3-turbo',
+    apiKey: '',
+  });
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
   const transcriptionRef = useRef(new TranscriptionService());
 
   stateRef.current = state;
+
+  const updateAsrProvider = (providerId: string) => {
+    const preset = getProviderPreset(providerId);
+    if (!preset) return;
+    setAsrConfig((current) => ({ ...current, providerId, baseUrl: preset.baseUrl, model: preset.defaultModel }));
+  };
+
+  const persistAsrConfig = () => {
+    saveAsrConfig(asrConfig);
+    transcriptionRef.current = new TranscriptionService(new OpenAICompatibleAsr(asrConfig));
+    setSettingsOpen(false);
+  };
+
+  useEffect(() => {
+    const saved = loadAsrConfig();
+    if (saved) transcriptionRef.current = new TranscriptionService(new OpenAICompatibleAsr(saved));
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -92,9 +119,23 @@ export function App() {
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
+          {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => setSettingsOpen((open) => !open)}>⚙</button>}
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => { captureRef.current?.cancel(); setState({ tag: 'idle' }); }}>×</button>}
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
+        {settingsOpen && state.tag === 'idle' && (
+          <form className="settings-panel" onSubmit={(event) => { event.preventDefault(); persistAsrConfig(); }}>
+            <label>语音 Provider
+              <select value={asrConfig.providerId} onChange={(event) => updateAsrProvider(event.target.value)}>
+                {PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr').map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
+              </select>
+            </label>
+            <label>API 地址<input value={asrConfig.baseUrl} onChange={(event) => setAsrConfig({ ...asrConfig, baseUrl: event.target.value })} /></label>
+            <label>模型<input value={asrConfig.model} onChange={(event) => setAsrConfig({ ...asrConfig, model: event.target.value })} /></label>
+            <label>API Key<input type="password" value={asrConfig.apiKey} onChange={(event) => setAsrConfig({ ...asrConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
+            <button className="save-button" type="submit">保存配置</button>
+          </form>
+        )}
       </section>
     </main>
   );

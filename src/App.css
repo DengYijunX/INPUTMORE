@@ -34,6 +34,7 @@ body { overflow: hidden; }
 .floating-card[data-state='processing'] { min-width: 330px; }
 .floating-card[data-state='completed'] { min-width: 190px; }
 .floating-card[data-state='error'] { min-width: 300px; }
+.floating-card:has(.settings-panel) { min-width: 340px; border-radius: 24px; }
 
 .capsule-content {
   display: flex;
@@ -57,4 +58,9 @@ body { overflow: hidden; }
 
 .capsule-status { margin-left: auto; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; }
 .cancel-button { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
+.settings-button { border: 0; color: inherit; background: transparent; opacity: 0.68; cursor: pointer; font-size: 16px; }
 .error-message { margin: -2px 16px 8px 46px; max-width: 250px; overflow: hidden; color: currentColor; font-size: 11px; opacity: 0.72; text-overflow: ellipsis; white-space: nowrap; }
+.settings-panel { display: grid; gap: 8px; padding: 4px 16px 16px; color: inherit; font-size: 11px; }
+.settings-panel label { display: grid; gap: 4px; opacity: 0.8; }
+.settings-panel input, .settings-panel select { width: 100%; border: 1px solid currentColor; border-radius: 8px; padding: 7px 8px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; opacity: 0.9; }
+.save-button { border: 0; border-radius: 9px; padding: 8px; color: #3b3935; background: #e8dfd0; cursor: pointer; font: inherit; font-weight: 650; }
