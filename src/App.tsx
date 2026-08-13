@@ -18,6 +18,9 @@ import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
 import { PreviewPage } from './PreviewPage';
 
+const PREVIEW_WIDTH = 420;
+const PREVIEW_GAP = 8;
+
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
   if (new URLSearchParams(window.location.search).get('window') === 'preview') return <PreviewPage />;
@@ -27,6 +30,7 @@ export function App() {
   const captureRef = useRef<AudioCapture | undefined>(undefined);
   const transcriptionRef = useRef(new TranscriptionService());
   const processingAbortRef = useRef<AbortController | undefined>(undefined);
+  const sessionVersionRef = useRef(0);
 
   stateRef.current = state;
 
@@ -41,24 +45,42 @@ export function App() {
     settings.once('tauri://error', (event) => console.error('InputMore settings window failed', event));
   };
 
-  const openPreviewWindow = async (text: string) => {
-    if (!('__TAURI_INTERNALS__' in window)) return;
-    localStorage.setItem('inputmore.preview.text', text);
+  const getPreviewPosition = async () => {
     const mainWindow = getCurrentWindow();
     const position = await mainWindow.outerPosition();
     const size = await mainWindow.outerSize();
-    const x = position.x + Math.max(0, Math.round((size.width - 420) / 2));
-    const y = position.y + size.height + 8;
+    return new PhysicalPosition(
+      position.x + Math.max(0, Math.round((size.width - PREVIEW_WIDTH) / 2)),
+      position.y + size.height + PREVIEW_GAP,
+    );
+  };
+
+  const syncPreviewPosition = async () => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    const preview = await WebviewWindow.getByLabel('preview');
+    if (!preview) return;
+    await preview.setPosition(await getPreviewPosition());
+  };
+
+  const closePreviewWindow = async () => {
+    const preview = await WebviewWindow.getByLabel('preview');
+    if (preview) await preview.close();
+  };
+
+  const openPreviewWindow = async (text: string) => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    localStorage.setItem('inputmore.preview.text', text);
+    const position = await getPreviewPosition();
     const existing = await WebviewWindow.getByLabel('preview');
     if (existing) {
-      await existing.setPosition(new PhysicalPosition(x, y));
+      await existing.setPosition(position);
       await existing.show();
       await existing.setFocus();
       await emit('inputmore://preview', { text });
       return;
     }
     const preview = new WebviewWindow('preview', {
-      url: 'index.html?window=preview', title: 'InputMore 结果', width: 420, height: 108, x, y,
+      url: 'index.html?window=preview', title: 'InputMore 结果', width: PREVIEW_WIDTH, height: 108, x: position.x, y: position.y,
       resizable: false, decorations: false, alwaysOnTop: true, transparent: true, backgroundColor: '#00000000', shadow: false,
     });
     preview.once('tauri://created', () => void emit('inputmore://preview', { text }));
@@ -66,10 +88,11 @@ export function App() {
   };
 
   const cancelCurrentTask = () => {
+    sessionVersionRef.current += 1;
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
-    void WebviewWindow.getByLabel('preview').then((preview) => preview?.hide());
+    void closePreviewWindow().catch((error) => console.error('InputMore preview close failed', error));
     setState({ tag: 'idle' });
   };
 
@@ -83,6 +106,16 @@ export function App() {
     void getCurrentWindow().setSize(new LogicalSize(380, 90))
       .catch((error) => console.error('InputMore window resize failed', error));
   }, [state.tag]);
+
+  useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    let unlisten: (() => void) | undefined;
+    const mainWindow = getCurrentWindow();
+    void mainWindow.onMoved(() => {
+      void syncPreviewPosition().catch((error) => console.error('InputMore preview position sync failed', error));
+    }).then((cleanup) => { unlisten = cleanup; });
+    return () => unlisten?.();
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -110,6 +143,7 @@ export function App() {
       if (!sessionEvent) return;
 
       if (sessionEvent.type === 'shortcut' && current.tag === 'idle') {
+        const sessionVersion = ++sessionVersionRef.current;
         setState(reduce(current, sessionEvent));
         void captureRef.current?.start().catch((error) => {
           console.error('InputMore microphone start failed', error);
@@ -120,6 +154,7 @@ export function App() {
       }
 
       if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording') {
+        const sessionVersion = sessionVersionRef.current;
         setState(reduce(current, sessionEvent));
         const controller = new AbortController();
         processingAbortRef.current = controller;
@@ -137,13 +172,14 @@ export function App() {
             return transformer.transform({ action: 'enhance', sourceText: transcript.text }, controller.signal);
           })
           .then((result) => {
+            if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
             processingAbortRef.current = undefined;
             setState({ tag: 'previewing', action: 'enhance', text: result.text });
             void openPreviewWindow(result.text);
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
             console.error('InputMore transcription failed', error);
             setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '转录失败', retryable: false });
           });
