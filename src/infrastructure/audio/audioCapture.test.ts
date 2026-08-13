@@ -46,4 +46,20 @@ describe('AudioCapture', () => {
 
     await expect(capture.start()).rejects.toMatchObject({ code: 'microphone_permission_denied' });
   });
+
+  it('emits non-empty audio chunks while recording', async () => {
+    const harness = createRecorderHarness();
+    const onChunk = vi.fn();
+    const capture = new AudioCapture({
+      getUserMedia: vi.fn().mockResolvedValue(harness.stream),
+      createRecorder: vi.fn().mockReturnValue(harness.recorder),
+      onChunk,
+    });
+
+    await capture.start();
+    const chunk = new Blob(['chunk']);
+    harness.recorder.ondataavailable?.({ data: chunk } as BlobEvent);
+
+    expect(onChunk).toHaveBeenCalledWith(chunk);
+  });
 });

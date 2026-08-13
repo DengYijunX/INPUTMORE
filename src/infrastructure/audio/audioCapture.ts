@@ -18,6 +18,7 @@ export class AudioCapture {
   constructor(private readonly dependencies: {
     getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
     createRecorder: RecorderFactory;
+    onChunk?: (chunk: Blob) => void;
   }) {}
 
   async start(): Promise<void> {
@@ -36,7 +37,10 @@ export class AudioCapture {
 
     this.chunks = [];
     this.recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) this.chunks.push(event.data);
+      if (event.data.size > 0) {
+        this.chunks.push(event.data);
+        this.dependencies.onChunk?.(event.data);
+      }
     };
     this.recorder.start();
   }
