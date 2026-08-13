@@ -22,6 +22,7 @@ export function App() {
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const floatingCardRef = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
   const transcriptionRef = useRef(new TranscriptionService());
@@ -57,12 +58,27 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
-    const frame = requestAnimationFrame(() => {
-      const contentHeight = Math.ceil(document.documentElement.scrollHeight);
-      void getCurrentWindow().setSize(new LogicalSize(380, Math.max(90, contentHeight)))
-        .catch((error) => console.error('InputMore window resize failed', error));
-    });
-    return () => cancelAnimationFrame(frame);
+    let frame = 0;
+    let resizing = false;
+    const resizeToContent = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const card = floatingCardRef.current;
+        if (!card || resizing) return;
+        const contentHeight = Math.ceil(card.getBoundingClientRect().height + 20);
+        resizing = true;
+        void getCurrentWindow().setSize(new LogicalSize(380, Math.max(90, contentHeight)))
+          .catch((error) => console.error('InputMore window resize failed', error))
+          .finally(() => { resizing = false; });
+      });
+    };
+    resizeToContent();
+    const observer = floatingCardRef.current ? new ResizeObserver(resizeToContent) : undefined;
+    if (floatingCardRef.current && observer) observer.observe(floatingCardRef.current);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
   }, [state.tag, previewExpanded]);
 
   useEffect(() => {
@@ -144,7 +160,7 @@ export function App() {
 
   return (
     <main className="app-shell" aria-label="InputMore">
-      <section className="floating-card" data-testid="capsule" data-state={state.tag === 'transcribing' ? 'processing' : state.tag} data-theme={theme}>
+      <section ref={floatingCardRef} className="floating-card" data-testid="capsule" data-state={state.tag === 'transcribing' ? 'processing' : state.tag} data-theme={theme}>
         <div
           className="capsule-content"
           data-tauri-drag-region
