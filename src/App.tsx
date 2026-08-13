@@ -1,7 +1,7 @@
 import './App.css';
 import { useEffect, useRef, useState } from 'react';
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow, PhysicalPosition, LogicalSize } from '@tauri-apps/api/window';
+import { emit, listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
 import { reduce } from './state/sessionMachine';
 import { toSessionEvent } from './application/shortcutEvents';
@@ -16,11 +16,12 @@ import { TextTransformationService } from './capabilities/text/TextTransformatio
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
+import { PreviewPage } from './PreviewPage';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
+  if (new URLSearchParams(window.location.search).get('window') === 'preview') return <PreviewPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
-  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
@@ -40,11 +41,35 @@ export function App() {
     settings.once('tauri://error', (event) => console.error('InputMore settings window failed', event));
   };
 
+  const openPreviewWindow = async (text: string) => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    localStorage.setItem('inputmore.preview.text', text);
+    const mainWindow = getCurrentWindow();
+    const position = await mainWindow.outerPosition();
+    const size = await mainWindow.outerSize();
+    const x = position.x + Math.max(0, Math.round((size.width - 420) / 2));
+    const y = position.y + size.height + 8;
+    const existing = await WebviewWindow.getByLabel('preview');
+    if (existing) {
+      await existing.setPosition(new PhysicalPosition(x, y));
+      await existing.show();
+      await existing.setFocus();
+      await emit('inputmore://preview', { text });
+      return;
+    }
+    const preview = new WebviewWindow('preview', {
+      url: 'index.html?window=preview', title: 'InputMore 结果', width: 420, height: 108, x, y,
+      resizable: false, decorations: false, alwaysOnTop: true, transparent: true, backgroundColor: '#00000000', shadow: false,
+    });
+    preview.once('tauri://created', () => void emit('inputmore://preview', { text }));
+    preview.once('tauri://error', (event) => console.error('InputMore preview window failed', event));
+  };
+
   const cancelCurrentTask = () => {
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
-    setPreviewExpanded(false);
+    void WebviewWindow.getByLabel('preview').then((preview) => preview?.hide());
     setState({ tag: 'idle' });
   };
 
@@ -55,10 +80,9 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
-    const height = state.tag === 'previewing' ? (previewExpanded ? 260 : 150) : 90;
-    void getCurrentWindow().setSize(new LogicalSize(420, height))
+    void getCurrentWindow().setSize(new LogicalSize(380, 90))
       .catch((error) => console.error('InputMore window resize failed', error));
-  }, [state.tag, previewExpanded]);
+  }, [state.tag]);
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -115,6 +139,7 @@ export function App() {
           .then((result) => {
             processingAbortRef.current = undefined;
             setState({ tag: 'previewing', action: 'enhance', text: result.text });
+            void openPreviewWindow(result.text);
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
@@ -156,15 +181,6 @@ export function App() {
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
       </section>
-      {state.tag === 'previewing' && (
-        <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
-          <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>
-            <span>整理结果</span><span className="preview-toggle">{previewExpanded ? '收起' : '展开'}⌄</span>
-          </button>
-          <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
-          {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
-        </section>
-      )}
     </main>
   );
 }

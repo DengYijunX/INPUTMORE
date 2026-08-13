@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Permissions for the InputMore desktop window",
-  "windows": ["main", "settings"],
+  "windows": ["main", "settings", "preview"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
