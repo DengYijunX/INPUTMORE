@@ -31,4 +31,18 @@ describe('Qwen3Asr', () => {
 
     await expect(provider.transcribe(new Blob(['audio']))).rejects.toThrow('Workspace ID');
   });
+
+  it('replaces the Workspace ID placeholder before sending the request', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: '结果' } }],
+    }), { status: 200 }));
+    const provider = new Qwen3Asr({
+      baseUrl: 'https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
+      workspaceId: 'llm-demo123', apiKey: 'secret', model: 'qwen3-asr-flash', fetcher,
+    });
+
+    await provider.transcribe(new Blob(['audio'], { type: 'audio/webm' }));
+
+    expect(fetcher.mock.calls[0][0]).toBe('https://llm-demo123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions');
+  });
 });

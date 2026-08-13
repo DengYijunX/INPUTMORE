@@ -5,6 +5,7 @@ type Fetcher = typeof fetch;
 export class Qwen3Asr implements Transcriber {
   constructor(private readonly config: {
     baseUrl: string;
+    workspaceId?: string;
     apiKey: string;
     model: string;
     fetcher?: Fetcher;
@@ -14,13 +15,14 @@ export class Qwen3Asr implements Transcriber {
     if (!this.config.baseUrl.trim() || !this.config.apiKey.trim() || !this.config.model.trim()) {
       throw new Error('Qwen3-ASR Provider 配置不完整');
     }
-    if (this.config.baseUrl.includes('{WorkspaceId}')) {
+    const baseUrl = this.config.baseUrl.replace('{WorkspaceId}', this.config.workspaceId?.trim() ?? '');
+    if (baseUrl.includes('{WorkspaceId}') || !baseUrl.startsWith('https://') || baseUrl.includes('https://.')) {
       throw new Error('Qwen3-ASR 需要填写 Workspace ID');
     }
 
     const data = await blobToDataUri(audio);
     const response = await (this.config.fetcher ?? fetch)(
-      `${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`,
+      `${baseUrl.replace(/\/$/, '')}/chat/completions`,
       {
         method: 'POST',
         headers: {
