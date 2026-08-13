@@ -12,6 +12,7 @@ import { OpenAICompatibleAsr } from './infrastructure/providers/asr/OpenAICompat
 import { loadAsrConfig } from './infrastructure/config/providerConfig';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
+import { ProcessingIndicator } from './presentation/ProcessingIndicator';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -126,6 +127,7 @@ export function App() {
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
+          {(state.tag === 'transcribing' || state.tag === 'processing') && <ProcessingIndicator />}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>

@@ -77,3 +77,10 @@ body { overflow: hidden; }
 .settings-section input, .settings-section select { min-height: 38px; border: 1px solid #d6cbbc; border-radius: 9px; padding: 8px 10px; color: #3d3934; background: rgba(255,255,255,.72); font: inherit; font-weight: 400; }
 .settings-section .save-button { width: max-content; padding: 10px 18px; }
 .settings-section.muted { opacity: .72; }
+.processing-indicator { display: inline-flex; align-items: center; width: 26px; color: currentColor; opacity: .72; }
+.processing-dots { display: inline-flex; align-items: center; gap: 3px; }
+.processing-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: inputmore-pulse 1.1s ease-in-out infinite; }
+.processing-dots i:nth-child(2) { animation-delay: .16s; }
+.processing-dots i:nth-child(3) { animation-delay: .32s; }
+@keyframes inputmore-pulse { 0%, 80%, 100% { transform: scale(.7); opacity: .35; } 40% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .processing-dots i { animation: none; opacity: .72; } }
