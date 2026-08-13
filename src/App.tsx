@@ -9,35 +9,37 @@ import { startDragFromPointer } from './presentation/windowDrag';
 import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { OpenAICompatibleAsr } from './infrastructure/providers/asr/OpenAICompatibleAsr';
-import { getProviderPreset, PROVIDER_PRESETS } from './infrastructure/providers/providerPresets';
-import { loadAsrConfig, saveAsrConfig, type AsrConfig } from './infrastructure/config/providerConfig';
+import { loadAsrConfig } from './infrastructure/config/providerConfig';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { SettingsPage } from './SettingsPage';
 
 export function App() {
+  if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
-    providerId: 'groq-whisper',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'whisper-large-v3-turbo',
-    apiKey: '',
-  });
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
   const transcriptionRef = useRef(new TranscriptionService());
+  const processingAbortRef = useRef<AbortController | undefined>(undefined);
 
   stateRef.current = state;
 
-  const updateAsrProvider = (providerId: string) => {
-    const preset = getProviderPreset(providerId);
-    if (!preset) return;
-    setAsrConfig((current) => ({ ...current, providerId, baseUrl: preset.baseUrl, model: preset.defaultModel }));
+  const openSettings = async () => {
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setState({ tag: 'error', action: 'enhance', message: '设置窗口只能在桌面应用中打开', retryable: false });
+      return;
+    }
+    const existing = await WebviewWindow.getByLabel('settings');
+    if (existing) { await existing.show(); await existing.setFocus(); return; }
+    const settings = new WebviewWindow('settings', { url: 'index.html?window=settings', title: 'InputMore 设置', width: 760, height: 620, resizable: true, center: true });
+    settings.once('tauri://error', (event) => console.error('InputMore settings window failed', event));
   };
 
-  const persistAsrConfig = () => {
-    saveAsrConfig(asrConfig);
-    transcriptionRef.current = new TranscriptionService(new OpenAICompatibleAsr(asrConfig));
-    setSettingsOpen(false);
+  const cancelCurrentTask = () => {
+    processingAbortRef.current?.abort();
+    processingAbortRef.current = undefined;
+    captureRef.current?.cancel();
+    setState({ tag: 'idle' });
   };
 
   useEffect(() => {
@@ -82,12 +84,17 @@ export function App() {
 
       if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording') {
         setState(reduce(current, sessionEvent));
+        const controller = new AbortController();
+        processingAbortRef.current = controller;
         void captureRef.current?.stop()
-          .then((audio) => transcriptionRef.current.transcribe(audio))
+          .then((audio) => transcriptionRef.current.transcribe(audio, controller.signal))
           .then(() => {
+            processingAbortRef.current = undefined;
             setState({ tag: 'error', action: 'enhance', message: '转录完成，但文本处理尚未接入', retryable: false });
           })
           .catch((error) => {
+            processingAbortRef.current = undefined;
+            if (controller.signal.aborted) return;
             console.error('InputMore transcription failed', error);
             setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '转录失败', retryable: false });
           });
@@ -109,7 +116,7 @@ export function App() {
           className="capsule-content"
           data-tauri-drag-region
           onPointerDown={(event) => {
-            void startDragFromPointer(event, () => getCurrentWindow().startDragging())
+        void startDragFromPointer(event, () => getCurrentWindow().startDragging())
               .catch((error) => console.error('InputMore window drag failed', error));
           }}
         >
@@ -119,23 +126,10 @@ export function App() {
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
-          {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => setSettingsOpen((open) => !open)}>⚙</button>}
-          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => { captureRef.current?.cancel(); setState({ tag: 'idle' }); }}>×</button>}
+          {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
+          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'error' && <p className="error-message">{state.message}</p>}
-        {settingsOpen && state.tag === 'idle' && (
-          <form className="settings-panel" onSubmit={(event) => { event.preventDefault(); persistAsrConfig(); }}>
-            <label>语音 Provider
-              <select value={asrConfig.providerId} onChange={(event) => updateAsrProvider(event.target.value)}>
-                {PROVIDER_PRESETS.filter((preset) => preset.kind === 'asr').map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
-              </select>
-            </label>
-            <label>API 地址<input value={asrConfig.baseUrl} onChange={(event) => setAsrConfig({ ...asrConfig, baseUrl: event.target.value })} /></label>
-            <label>模型<input value={asrConfig.model} onChange={(event) => setAsrConfig({ ...asrConfig, model: event.target.value })} /></label>
-            <label>API Key<input type="password" value={asrConfig.apiKey} onChange={(event) => setAsrConfig({ ...asrConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
-            <button className="save-button" type="submit">保存配置</button>
-          </form>
-        )}
       </section>
     </main>
   );
