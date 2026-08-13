@@ -4,7 +4,7 @@ const IDLE: SessionState = { tag: 'idle' };
 
 export function reduce(state: SessionState, event: SessionEvent): SessionState {
   if (event.type === 'escape') {
-    if (state.tag === 'recording' || state.tag === 'transcribing' || state.tag === 'processing') {
+    if (state.tag === 'recording' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'showingAnswer') {
       return IDLE;
     }
     return state;

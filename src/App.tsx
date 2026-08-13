@@ -16,6 +16,9 @@ import { TextTransformationService } from './capabilities/text/TextTransformatio
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
+import type { TextOutputPort, TargetContext } from './capabilities/output/TextOutputPort';
+import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
+import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -28,6 +31,9 @@ export function App() {
   const transcriptionRef = useRef(new TranscriptionService());
   const processingAbortRef = useRef<AbortController | undefined>(undefined);
   const sessionVersionRef = useRef(0);
+  const outputRef = useRef<TextOutputPort | undefined>(undefined);
+  const targetRef = useRef<TargetContext | undefined>(undefined);
+  const lastResultRef = useRef('');
 
   stateRef.current = state;
 
@@ -47,6 +53,7 @@ export function App() {
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
+    targetRef.current = undefined;
     setPreviewExpanded(false);
     setState({ tag: 'idle' });
   };
@@ -58,6 +65,8 @@ export function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
+
+    outputRef.current = createTauriTextOutput();
     let frame = 0;
     let resizing = false;
     const resizeToContent = () => {
@@ -111,12 +120,19 @@ export function App() {
 
       if (sessionEvent.type === 'shortcut' && current.tag === 'idle') {
         const sessionVersion = ++sessionVersionRef.current;
-        setState(reduce(current, sessionEvent));
-        void captureRef.current?.start().catch((error) => {
+        void outputRef.current?.captureTarget()
+          .then((target) => {
+            if (sessionVersion !== sessionVersionRef.current) return;
+            targetRef.current = target;
+            setState(reduce(current, sessionEvent));
+            return captureRef.current?.start();
+          })
+          .catch((error) => {
           console.error('InputMore microphone start failed', error);
           captureRef.current?.cancel();
+          targetRef.current = undefined;
           setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
-        });
+          });
         return;
       }
 
@@ -140,9 +156,23 @@ export function App() {
           })
           .then((result) => {
             if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
-            processingAbortRef.current = undefined;
             setPreviewExpanded(false);
-            setState({ tag: 'previewing', action: 'enhance', text: result.text });
+            lastResultRef.current = result.text;
+            const target = targetRef.current;
+            const output = outputRef.current;
+            if (!target || !output) throw new Error('没有可用的输入位置');
+            setState({ tag: 'writingBack', action: 'enhance', text: result.text });
+            return output.insertText(result.text, target).then((outputResult) => {
+              if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
+              if (!outputResult.ok) {
+                processingAbortRef.current = undefined;
+                setState({ tag: 'error', action: 'enhance', message: WRITEBACK_FAILURE_COPY, retryable: false });
+                return;
+              }
+              processingAbortRef.current = undefined;
+              targetRef.current = undefined;
+              setState(reduce({ tag: 'writingBack', action: 'enhance', text: result.text }, { type: 'writeback_succeeded', undoId: outputResult.undoId }));
+            });
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
@@ -176,13 +206,13 @@ export function App() {
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
+            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
-          {(state.tag === 'transcribing' || state.tag === 'processing') && <ProcessingIndicator />}
+          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
-          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
+          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
-        {state.tag === 'error' && <p className="error-message">{state.message}</p>}
+        {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p><button className="copy-text-button" type="button" onClick={() => void outputRef.current?.copyText(lastResultRef.current)}>{COPY_TEXT_LABEL}</button></div>}
         {state.tag === 'previewing' && (
           <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
             <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>

@@ -57,6 +57,10 @@ body { overflow: hidden; }
 .cancel-button { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
 .settings-button { border: 0; color: inherit; background: transparent; opacity: 0.68; cursor: pointer; font-size: 16px; }
 .error-message { margin: -2px 16px 8px 46px; max-width: 250px; overflow: hidden; color: currentColor; font-size: 11px; opacity: 0.72; text-overflow: ellipsis; white-space: nowrap; }
+.error-actions { display: flex; align-items: center; gap: 10px; margin: -2px 16px 8px 46px; min-width: 0; }
+.error-actions .error-message { margin: 0; }
+.copy-text-button { flex: 0 0 auto; border: 1px solid currentColor; border-radius: 999px; padding: 3px 9px; color: inherit; background: rgba(255,255,255,0.12); font: inherit; font-size: 11px; opacity: 0.86; cursor: pointer; }
+.copy-text-button:hover { background: rgba(255,255,255,0.22); opacity: 1; }
 .settings-panel { display: grid; gap: 8px; padding: 4px 16px 16px; color: inherit; font-size: 11px; }
 .settings-panel label { display: grid; gap: 4px; opacity: 0.8; }
 .settings-panel input, .settings-panel select { width: 100%; border: 1px solid currentColor; border-radius: 8px; padding: 7px 8px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; opacity: 0.9; }

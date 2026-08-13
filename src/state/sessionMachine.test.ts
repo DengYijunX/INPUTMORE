@@ -43,11 +43,19 @@ describe('session machine', () => {
       { tag: 'recording', action: 'enhance', startedAt: 10 },
       { tag: 'transcribing', action: 'translate', audioId: 'audio-1' },
       { tag: 'processing', action: 'ask', requestId: 'req-1' },
+      { tag: 'writingBack', action: 'enhance', text: '结果' },
     ];
 
     for (const state of states) {
       expect(reduce(state, { type: 'escape' })).toEqual({ tag: 'idle' });
     }
+  });
+
+  it('completes a successful write-back', () => {
+    expect(reduce(
+      { tag: 'writingBack', action: 'enhance', text: '结果' },
+      { type: 'writeback_succeeded', undoId: 'undo-1' },
+    )).toEqual({ tag: 'completed', action: 'enhance', undoId: 'undo-1' });
   });
 
   it('preserves a retryable failure', () => {
