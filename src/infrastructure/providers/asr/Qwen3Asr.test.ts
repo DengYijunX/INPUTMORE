@@ -45,4 +45,21 @@ describe('Qwen3Asr', () => {
 
     expect(fetcher.mock.calls[0][0]).toBe('https://llm-demo123.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions');
   });
+
+  it('binds the browser fetch context when no custom fetcher is provided', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: '结果' } }],
+    }), { status: 200 }));
+    globalThis.fetch = fetchMock as typeof fetch;
+    try {
+      const provider = new Qwen3Asr({
+        baseUrl: 'https://workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
+        apiKey: 'secret', model: 'qwen3-asr-flash',
+      });
+      await expect(provider.transcribe(new Blob(['audio']))).resolves.toEqual({ text: '结果' });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

@@ -21,7 +21,7 @@ export class Qwen3Asr implements Transcriber {
     }
 
     const data = await blobToDataUri(audio);
-    const response = await (this.config.fetcher ?? fetch)(
+    const response = await (this.config.fetcher ?? globalThis.fetch.bind(globalThis))(
       `${baseUrl.replace(/\/$/, '')}/chat/completions`,
       {
         method: 'POST',

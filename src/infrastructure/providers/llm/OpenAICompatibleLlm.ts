@@ -12,7 +12,7 @@ export class OpenAICompatibleLlm implements LlmProvider {
     if (!config.apiKey.trim()) throw new Error('Provider API key is required');
     this.baseUrl = config.baseUrl.replace(/\/$/, '');
     this.apiKey = config.apiKey;
-    this.fetcher = config.fetcher ?? fetch;
+    this.fetcher = config.fetcher ?? globalThis.fetch.bind(globalThis);
   }
 
   async generate(request: LlmRequest, signal?: AbortSignal): Promise<LlmResponse> {
