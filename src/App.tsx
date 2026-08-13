@@ -1,15 +1,20 @@
 import './App.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
 import { reduce } from './state/sessionMachine';
 import { toSessionEvent } from './application/shortcutEvents';
 import { startDragFromPointer } from './presentation/windowDrag';
+import { AudioCapture } from './infrastructure/audio/audioCapture';
 
 export function App() {
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const stateRef = useRef(state);
+  const captureRef = useRef<AudioCapture | undefined>(undefined);
+
+  stateRef.current = state;
 
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-color-scheme: light)');
@@ -23,17 +28,44 @@ export function App() {
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
 
+    if (navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined') {
+      captureRef.current = new AudioCapture({
+        getUserMedia: (constraints) => navigator.mediaDevices.getUserMedia(constraints),
+        createRecorder: (stream) => new MediaRecorder(stream),
+      });
+    }
+
     let unlisten: (() => void) | undefined;
     void listen<{ action: 'enhance'; phase: 'pressed' | 'released' }>('inputmore://shortcut', (event) => {
-      setState((current) => {
-        const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
-        return sessionEvent ? reduce(current, sessionEvent) : current;
-      });
+      const current = stateRef.current;
+      const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
+      if (!sessionEvent) return;
+
+      if (sessionEvent.type === 'shortcut' && current.tag === 'idle') {
+        setState(reduce(current, sessionEvent));
+        void captureRef.current?.start().catch((error) => {
+          console.error('InputMore microphone start failed', error);
+          captureRef.current?.cancel();
+          setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
+        });
+        return;
+      }
+
+      if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording') {
+        setState(reduce(current, sessionEvent));
+        void captureRef.current?.stop().catch((error) => {
+          console.error('InputMore microphone stop failed', error);
+          setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '录音失败', retryable: true });
+        });
+      }
     }).then((cleanup) => {
       unlisten = cleanup;
     });
 
-    return () => unlisten?.();
+    return () => {
+      unlisten?.();
+      captureRef.current?.cancel();
+    };
   }, []);
 
   return (
@@ -53,7 +85,7 @@ export function App() {
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : 'READY'}
           </span>
-          {(state.tag === 'transcribing' || state.tag === 'processing') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => setState({ tag: 'idle' })}>×</button>}
+          {(state.tag === 'transcribing' || state.tag === 'processing') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => { captureRef.current?.cancel(); setState({ tag: 'idle' }); }}>×</button>}
         </div>
       </section>
     </main>
