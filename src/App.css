@@ -33,6 +33,7 @@ body { overflow: hidden; }
 .floating-card[data-state='recording'] { min-width: 250px; }
 .floating-card[data-state='processing'] { min-width: 330px; }
 .floating-card[data-state='completed'] { min-width: 190px; }
+.floating-card[data-state='error'] { min-width: 300px; }
 
 .capsule-content {
   display: flex;
@@ -56,3 +57,4 @@ body { overflow: hidden; }
 
 .capsule-status { margin-left: auto; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; }
 .cancel-button { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
+.error-message { margin: -2px 16px 8px 46px; max-width: 250px; overflow: hidden; color: currentColor; font-size: 11px; opacity: 0.72; text-overflow: ellipsis; white-space: nowrap; }

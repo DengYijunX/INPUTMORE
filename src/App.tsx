@@ -7,12 +7,14 @@ import { reduce } from './state/sessionMachine';
 import { toSessionEvent } from './application/shortcutEvents';
 import { startDragFromPointer } from './presentation/windowDrag';
 import { AudioCapture } from './infrastructure/audio/audioCapture';
+import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 
 export function App() {
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const stateRef = useRef(state);
   const captureRef = useRef<AudioCapture | undefined>(undefined);
+  const transcriptionRef = useRef(new TranscriptionService());
 
   stateRef.current = state;
 
@@ -53,10 +55,15 @@ export function App() {
 
       if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording') {
         setState(reduce(current, sessionEvent));
-        void captureRef.current?.stop().catch((error) => {
-          console.error('InputMore microphone stop failed', error);
-          setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '录音失败', retryable: true });
-        });
+        void captureRef.current?.stop()
+          .then((audio) => transcriptionRef.current.transcribe(audio))
+          .then(() => {
+            setState({ tag: 'error', action: 'enhance', message: '转录完成，但文本处理尚未接入', retryable: false });
+          })
+          .catch((error) => {
+            console.error('InputMore transcription failed', error);
+            setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '转录失败', retryable: false });
+          });
       }
     }).then((cleanup) => {
       unlisten = cleanup;
@@ -83,10 +90,11 @@ export function App() {
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : 'READY'}
+            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
-          {(state.tag === 'transcribing' || state.tag === 'processing') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => { captureRef.current?.cancel(); setState({ tag: 'idle' }); }}>×</button>}
+          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={() => { captureRef.current?.cancel(); setState({ tag: 'idle' }); }}>×</button>}
         </div>
+        {state.tag === 'error' && <p className="error-message">{state.message}</p>}
       </section>
     </main>
   );
