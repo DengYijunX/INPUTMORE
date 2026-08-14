@@ -1,39 +1,13 @@
-use tauri::Emitter;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
-
 mod output;
+mod shortcut;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let enhance_shortcut = Shortcut::new(None, Code::AltRight);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(move |app, shortcut, event| {
-                    if shortcut == &enhance_shortcut {
-                        let phase = match event.state() {
-                            ShortcutState::Pressed => "pressed",
-                            ShortcutState::Released => "released",
-                        };
-                        let target_window_id = if phase == "pressed" {
-                            output::capture_foreground_window().ok().flatten()
-                        } else {
-                            None
-                        };
-                        let _ = app.emit("inputmore://shortcut", serde_json::json!({
-                            "action": "enhance",
-                            "phase": phase,
-                            "targetWindowId": target_window_id,
-                        }));
-                    }
-                })
-                .build(),
-        )
         .setup(move |app| {
-            app.global_shortcut().register(enhance_shortcut)?;
+            shortcut::install(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
