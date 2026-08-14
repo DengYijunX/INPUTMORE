@@ -8,6 +8,7 @@ type OutputDependencies = {
   writeClipboard: (text: string) => Promise<void>;
   restoreForeground: (id: string) => Promise<void>;
   sendPaste: () => Promise<void>;
+  sendUndo: () => Promise<void>;
   waitForPaste: () => Promise<void>;
 };
 
@@ -50,6 +51,20 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
       }
     },
 
+    async undoText(target: TargetContext): Promise<OutputResult> {
+      try {
+        try {
+          await deps.restoreForeground(target.id);
+        } catch {
+          // The target may already be foreground; continue with undo.
+        }
+        await deps.sendUndo();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, code: 'paste_failed', message: toMessage(error) };
+      }
+    },
+
     async copyText(text: string) {
       await deps.writeClipboard(text);
     },
@@ -63,6 +78,7 @@ export function createTauriTextOutput(): TextOutputPort {
     writeClipboard: (text) => writeText(text),
     restoreForeground: (id) => invoke('restore_foreground_window', { id }),
     sendPaste: () => invoke('send_paste'),
+    sendUndo: () => invoke('send_undo'),
     waitForPaste: () => new Promise((resolve) => window.setTimeout(resolve, 120)),
   });
 }

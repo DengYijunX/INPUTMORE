@@ -10,6 +10,7 @@ describe('TauriTextOutput', () => {
       writeClipboard: async (text) => { calls.push(`clipboard:${text}`); },
       restoreForeground: async () => { calls.push('focus'); },
       sendPaste: async () => { calls.push('paste'); },
+      sendUndo: async () => { calls.push('undo'); },
       waitForPaste: async () => { calls.push('wait'); },
     });
 
@@ -26,6 +27,7 @@ describe('TauriTextOutput', () => {
       writeClipboard: async (text) => { calls.push(`clipboard:${text}`); },
       restoreForeground: async () => { calls.push('focus'); },
       sendPaste: async () => { calls.push('paste'); throw new Error('目标窗口不可用'); },
+      sendUndo: async () => { calls.push('undo'); },
       waitForPaste: async () => { calls.push('wait'); },
     });
 
@@ -42,11 +44,28 @@ describe('TauriTextOutput', () => {
       writeClipboard: async (text) => { calls.push(`clipboard:${text}`); },
       restoreForeground: async () => { calls.push('focus'); throw new Error('目标窗口已在前台'); },
       sendPaste: async () => { calls.push('paste'); },
+      sendUndo: async () => { calls.push('undo'); },
       waitForPaste: async () => { calls.push('wait'); },
     });
 
     const target = await adapter.captureTarget();
     expect(await adapter.insertText('整理结果', target)).toEqual({ ok: true });
     expect(calls).toEqual(['clipboard:整理结果', 'focus', 'paste', 'wait', 'clipboard:用户原剪贴板']);
+  });
+
+  it('undoes the last write in the original target window', async () => {
+    const calls: string[] = [];
+    const adapter = createTextOutput({
+      captureForeground: async () => 'window-1',
+      readClipboard: async () => '用户原剪贴板',
+      writeClipboard: async () => undefined,
+      restoreForeground: async (id) => { calls.push(`focus:${id}`); },
+      sendPaste: async () => undefined,
+      sendUndo: async () => { calls.push('undo'); },
+      waitForPaste: async () => undefined,
+    });
+
+    await expect(adapter.undoText({ id: 'window-1' })).resolves.toEqual({ ok: true });
+    expect(calls).toEqual(['focus:window-1', 'undo']);
   });
 });

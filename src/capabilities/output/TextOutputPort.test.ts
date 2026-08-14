@@ -7,6 +7,7 @@ describe('TextOutputPort contract', () => {
     const output: TextOutputPort = {
       captureTarget: async () => target,
       insertText: async () => ({ ok: true, undoId: 'window-1:1' } satisfies OutputResult),
+      undoText: async () => ({ ok: true } satisfies OutputResult),
       copyText: async () => undefined,
     };
 

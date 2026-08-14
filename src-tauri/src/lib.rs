@@ -40,6 +40,7 @@ pub fn run() {
             output::capture_foreground_window,
             output::restore_foreground_window,
             output::send_paste,
+            output::send_undo,
         ])
         .run(tauri::generate_context!())
         .expect("error while running inputmore application");

@@ -58,6 +58,22 @@ export function App() {
     setState({ tag: 'idle' });
   };
 
+  const undoLastWrite = () => {
+    const target = targetRef.current;
+    const output = outputRef.current;
+    if (!target || !output || stateRef.current.tag !== 'completed') return;
+    const sessionVersion = ++sessionVersionRef.current;
+    void output.undoText(target).then((result) => {
+      if (sessionVersion !== sessionVersionRef.current) return;
+      targetRef.current = undefined;
+      if (result.ok) {
+        setState({ tag: 'idle' });
+      } else {
+        setState({ tag: 'error', action: 'enhance', message: '撤回失败，请手动撤销', retryable: false });
+      }
+    });
+  };
+
   useEffect(() => {
     const saved = loadAsrConfig();
     if (saved) transcriptionRef.current = new TranscriptionService(createAsrProvider(saved));
@@ -105,7 +121,10 @@ export function App() {
   useEffect(() => {
     if (state.tag !== 'completed') return;
     const timer = window.setTimeout(() => {
-      if (stateRef.current.tag === 'completed') setState(reduce(stateRef.current, { type: 'reset' }));
+      if (stateRef.current.tag === 'completed') {
+        targetRef.current = undefined;
+        setState(reduce(stateRef.current, { type: 'reset' }));
+      }
     }, 1000);
     return () => window.clearTimeout(timer);
   }, [state.tag]);
@@ -217,6 +236,7 @@ export function App() {
           </span>
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
+          {state.tag === 'completed' && <button className="undo-button" type="button" onClick={undoLastWrite}>撤回</button>}
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p><button className="copy-text-button" type="button" onClick={() => void outputRef.current?.copyText(lastResultRef.current)}>{COPY_TEXT_LABEL}</button></div>}
