@@ -1,5 +1,6 @@
 use std::ptr::null_mut;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Emitter};
 use windows_sys::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
@@ -13,6 +14,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 const RIGHT_ALT_VK: u32 = VK_RMENU as u32;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static RIGHT_ALT_DOWN: AtomicBool = AtomicBool::new(false);
 
 pub fn install(app: AppHandle) {
     let _ = APP_HANDLE.set(app);
@@ -45,6 +47,14 @@ unsafe extern "system" fn keyboard_proc(
     if code >= 0 && lparam != 0 {
         let event = &*(lparam as *const KBDLLHOOKSTRUCT);
         if let Some(phase) = phase_for_key_event(event.vkCode, wparam as u32) {
+            let should_emit = match phase {
+                "pressed" => !RIGHT_ALT_DOWN.swap(true, Ordering::AcqRel),
+                "released" => RIGHT_ALT_DOWN.swap(false, Ordering::AcqRel),
+                _ => false,
+            };
+            if !should_emit {
+                return CallNextHookEx(null_mut(), code, wparam, lparam);
+            }
             let target_window_id = if phase == "pressed" {
                 super::output::capture_foreground_window().ok().flatten()
             } else {
@@ -78,11 +88,35 @@ fn phase_for_key_event(vk_code: u32, message: u32) -> Option<&'static str> {
 }
 
 #[cfg(test)]
+fn should_emit_phase(phase: &str, is_down: &mut bool) -> bool {
+    match phase {
+        "pressed" if !*is_down => {
+            *is_down = true;
+            true
+        }
+        "released" if *is_down => {
+            *is_down = false;
+            true
+        }
+        _ => false,
+    }
+}
+
+#[cfg(test)]
 mod tests {
     #[test]
     fn maps_only_right_alt_key_events_to_toggle_phases() {
         assert_eq!(super::phase_for_key_event(0xA5, 0x0104), Some("pressed"));
         assert_eq!(super::phase_for_key_event(0xA5, 0x0105), Some("released"));
         assert_eq!(super::phase_for_key_event(0xA4, 0x0104), None);
+    }
+
+    #[test]
+    fn suppresses_repeated_right_alt_key_events() {
+        let mut is_down = false;
+        assert!(super::should_emit_phase("pressed", &mut is_down));
+        assert!(!super::should_emit_phase("pressed", &mut is_down));
+        assert!(super::should_emit_phase("released", &mut is_down));
+        assert!(!super::should_emit_phase("released", &mut is_down));
     }
 }

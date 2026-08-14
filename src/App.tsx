@@ -30,6 +30,7 @@ export function App() {
   const captureRef = useRef<AudioCapture | undefined>(undefined);
   const transcriptionRef = useRef(new TranscriptionService());
   const processingAbortRef = useRef<AbortController | undefined>(undefined);
+  const stopRequestedRef = useRef(false);
   const sessionVersionRef = useRef(0);
   const outputRef = useRef<TextOutputPort | undefined>(undefined);
   const targetRef = useRef<TargetContext | undefined>(undefined);
@@ -53,6 +54,7 @@ export function App() {
     processingAbortRef.current?.abort();
     processingAbortRef.current = undefined;
     captureRef.current?.cancel();
+    stopRequestedRef.current = false;
     targetRef.current = undefined;
     setPreviewExpanded(false);
     setState({ tag: 'idle' });
@@ -152,6 +154,7 @@ export function App() {
           return;
         }
         targetRef.current = { id: sessionEvent.targetWindowId };
+        stopRequestedRef.current = false;
         setState(reduce(current, sessionEvent));
         void captureRef.current?.start().catch((error) => {
           console.error('InputMore microphone start failed', error);
@@ -162,7 +165,8 @@ export function App() {
         return;
       }
 
-      if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording') {
+      if (sessionEvent.type === 'recording_stopped' && current.tag === 'recording' && !stopRequestedRef.current) {
+        stopRequestedRef.current = true;
         const sessionVersion = sessionVersionRef.current;
         setState(reduce(current, sessionEvent));
         const controller = new AbortController();
@@ -196,7 +200,6 @@ export function App() {
                 return;
               }
               processingAbortRef.current = undefined;
-              targetRef.current = undefined;
               setState(reduce({ tag: 'writingBack', action: 'enhance', text: result.text }, { type: 'writeback_succeeded', undoId: outputResult.undoId }));
             });
           })

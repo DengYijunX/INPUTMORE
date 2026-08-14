@@ -24,6 +24,7 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
 
     async insertText(text: string, target: TargetContext): Promise<OutputResult> {
       let previous: string;
+      let shouldRestoreClipboard = false;
       try {
         previous = await deps.readClipboard();
       } catch (error) {
@@ -32,6 +33,7 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
 
       try {
         await deps.writeClipboard(text);
+        shouldRestoreClipboard = true;
         try {
           await deps.restoreForeground(target.id);
         } catch {
@@ -39,14 +41,18 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
         }
         await deps.sendPaste();
         await deps.waitForPaste();
+        const clipboardAfterPaste = await deps.readClipboard();
+        shouldRestoreClipboard = clipboardAfterPaste === text;
         return { ok: true };
       } catch (error) {
         return { ok: false, code: 'paste_failed', message: toMessage(error) };
       } finally {
-        try {
-          await deps.writeClipboard(previous);
-        } catch {
-          // The result has already been classified; clipboard restoration is best effort.
+        if (shouldRestoreClipboard) {
+          try {
+            await deps.writeClipboard(previous);
+          } catch {
+            // The result has already been classified; clipboard restoration is best effort.
+          }
         }
       }
     },
@@ -79,6 +85,6 @@ export function createTauriTextOutput(): TextOutputPort {
     restoreForeground: (id) => invoke('restore_foreground_window', { id }),
     sendPaste: () => invoke('send_paste'),
     sendUndo: () => invoke('send_undo'),
-    waitForPaste: () => new Promise((resolve) => window.setTimeout(resolve, 120)),
+      waitForPaste: () => new Promise((resolve) => window.setTimeout(resolve, 500)),
   });
 }
