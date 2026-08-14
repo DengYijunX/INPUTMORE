@@ -3,6 +3,8 @@ import type { SessionEvent, SessionState } from '../domain/actions';
 const IDLE: SessionState = { tag: 'idle' };
 
 export function reduce(state: SessionState, event: SessionEvent): SessionState {
+  if (event.type === 'reset' && state.tag === 'completed') return IDLE;
+
   if (event.type === 'escape') {
     if (state.tag === 'recording' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'showingAnswer') {
       return IDLE;

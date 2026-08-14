@@ -58,6 +58,13 @@ describe('session machine', () => {
     )).toEqual({ tag: 'completed', action: 'enhance', undoId: 'undo-1' });
   });
 
+  it('returns to idle after the completed feedback window', () => {
+    expect(reduce(
+      { tag: 'completed', action: 'enhance', undoId: 'undo-1' },
+      { type: 'reset' },
+    )).toEqual({ tag: 'idle' });
+  });
+
   it('preserves a retryable failure', () => {
     const state: SessionState = { tag: 'processing', action: 'translate', requestId: 'req-3' };
     expect(reduce(state, {

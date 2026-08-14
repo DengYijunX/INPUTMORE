@@ -21,5 +21,6 @@ export type SessionEvent =
   | { type: 'writeback_succeeded'; undoId?: string }
   | { type: 'answer_inserted'; undoId?: string }
   | { type: 'completed'; undoId?: string }
+  | { type: 'reset' }
   | { type: 'failed'; message: string; retryable: boolean }
   | { type: 'escape' };

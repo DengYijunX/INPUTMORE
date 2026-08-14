@@ -103,6 +103,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (state.tag !== 'completed') return;
+    const timer = window.setTimeout(() => {
+      if (stateRef.current.tag === 'completed') setState(reduce(stateRef.current, { type: 'reset' }));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [state.tag]);
+
+  useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return;
 
     if (navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined') {
