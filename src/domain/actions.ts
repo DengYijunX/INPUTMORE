@@ -12,7 +12,7 @@ export type SessionState =
   | { tag: 'error'; action?: Action; message: string; retryable: boolean };
 
 export type SessionEvent =
-  | { type: 'shortcut'; action: Action; durationMs: number }
+  | { type: 'shortcut'; action: Action; durationMs: number; targetWindowId?: string }
   | { type: 'recording_stopped'; audioId: string }
   | { type: 'transcription_started'; requestId: string }
   | { type: 'transcription_succeeded'; requestId: string }

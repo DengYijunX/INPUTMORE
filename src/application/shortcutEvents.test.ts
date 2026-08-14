@@ -11,3 +11,12 @@ it('turns the second shortcut press into a recording stop event', () => {
     audioId: 'pending-audio',
   });
 });
+
+it('keeps the target window captured at shortcut time', () => {
+  expect(toSessionEvent({ action: 'enhance', phase: 'pressed', targetWindowId: 'window-1' }, false)).toEqual({
+    type: 'shortcut',
+    action: 'enhance',
+    durationMs: 0,
+    targetWindowId: 'window-1',
+  });
+});

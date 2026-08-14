@@ -113,26 +113,25 @@ export function App() {
     }
 
     let unlisten: (() => void) | undefined;
-    void listen<{ action: 'enhance'; phase: 'pressed' | 'released' }>('inputmore://shortcut', (event) => {
+    void listen<{ action: 'enhance'; phase: 'pressed' | 'released'; targetWindowId?: string }>('inputmore://shortcut', (event) => {
       const current = stateRef.current;
       const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
       if (!sessionEvent) return;
 
       if (sessionEvent.type === 'shortcut' && current.tag === 'idle') {
         const sessionVersion = ++sessionVersionRef.current;
-        void outputRef.current?.captureTarget()
-          .then((target) => {
-            if (sessionVersion !== sessionVersionRef.current) return;
-            targetRef.current = target;
-            setState(reduce(current, sessionEvent));
-            return captureRef.current?.start();
-          })
-          .catch((error) => {
+        if (!sessionEvent.targetWindowId) {
+          setState({ tag: 'error', action: 'enhance', message: '没有可用的输入位置', retryable: true });
+          return;
+        }
+        targetRef.current = { id: sessionEvent.targetWindowId };
+        setState(reduce(current, sessionEvent));
+        void captureRef.current?.start().catch((error) => {
           console.error('InputMore microphone start failed', error);
           captureRef.current?.cancel();
           targetRef.current = undefined;
           setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
-          });
+        });
         return;
       }
 

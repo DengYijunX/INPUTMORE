@@ -18,9 +18,15 @@ pub fn run() {
                             ShortcutState::Pressed => "pressed",
                             ShortcutState::Released => "released",
                         };
+                        let target_window_id = if phase == "pressed" {
+                            output::capture_foreground_window().ok().flatten()
+                        } else {
+                            None
+                        };
                         let _ = app.emit("inputmore://shortcut", serde_json::json!({
                             "action": "enhance",
                             "phase": phase,
+                            "targetWindowId": target_window_id,
                         }));
                     }
                 })
