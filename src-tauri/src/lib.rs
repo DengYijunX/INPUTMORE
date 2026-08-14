@@ -1,11 +1,11 @@
 use tauri::Emitter;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
 
 mod output;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let enhance_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
+    let enhance_shortcut = Shortcut::new(None, Code::AltRight);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
