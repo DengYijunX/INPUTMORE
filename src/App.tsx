@@ -125,7 +125,7 @@ export function App() {
         targetRef.current = undefined;
         setState(reduce(stateRef.current, { type: 'reset' }));
       }
-    }, 1000);
+    }, 3000);
     return () => window.clearTimeout(timer);
   }, [state.tag]);
 
