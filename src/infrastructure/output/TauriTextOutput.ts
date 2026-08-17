@@ -13,6 +13,8 @@ type OutputDependencies = {
 };
 
 const toMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+const cancelledResult: OutputResult = { ok: false, code: 'cancelled', message: '操作已取消' };
+const isCancelled = (signal?: AbortSignal) => signal?.aborted === true;
 
 export function createTextOutput(deps: OutputDependencies): TextOutputPort {
   return {
@@ -22,11 +24,13 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
       return { id };
     },
 
-    async insertText(text: string, target: TargetContext): Promise<OutputResult> {
+    async insertText(text: string, target: TargetContext, signal?: AbortSignal): Promise<OutputResult> {
+      if (isCancelled(signal)) return cancelledResult;
       let previous: string;
       let shouldRestoreClipboard = false;
       try {
         previous = await deps.readClipboard();
+        if (isCancelled(signal)) return cancelledResult;
       } catch (error) {
         return { ok: false, code: 'clipboard_unavailable', message: toMessage(error) };
       }
@@ -34,13 +38,16 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
       try {
         await deps.writeClipboard(text);
         shouldRestoreClipboard = true;
+        if (isCancelled(signal)) return cancelledResult;
         try {
           await deps.restoreForeground(target.id);
         } catch {
           // The target may already be foreground; continue with paste.
         }
+        if (isCancelled(signal)) return cancelledResult;
         await deps.sendPaste();
         await deps.waitForPaste();
+        if (isCancelled(signal)) return cancelledResult;
         const clipboardAfterPaste = await deps.readClipboard();
         shouldRestoreClipboard = clipboardAfterPaste === text;
         return { ok: true };
@@ -57,13 +64,15 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
       }
     },
 
-    async undoText(target: TargetContext): Promise<OutputResult> {
+    async undoText(target: TargetContext, signal?: AbortSignal): Promise<OutputResult> {
+      if (isCancelled(signal)) return cancelledResult;
       try {
         try {
           await deps.restoreForeground(target.id);
         } catch {
           // The target may already be foreground; continue with undo.
         }
+        if (isCancelled(signal)) return cancelledResult;
         await deps.sendUndo();
         return { ok: true };
       } catch (error) {

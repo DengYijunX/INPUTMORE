@@ -192,7 +192,7 @@ export function App() {
             const output = outputRef.current;
             if (!target || !output) throw new Error('没有可用的输入位置');
             setState({ tag: 'writingBack', action: 'enhance', text: result.text });
-            return output.insertText(result.text, target).then((outputResult) => {
+            return output.insertText(result.text, target, controller.signal).then((outputResult) => {
               if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
               if (!outputResult.ok) {
                 processingAbortRef.current = undefined;

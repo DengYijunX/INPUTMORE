@@ -12,7 +12,7 @@ export type OutputResult =
 
 export interface TextOutputPort {
   captureTarget(): Promise<TargetContext>;
-  insertText(text: string, target: TargetContext): Promise<OutputResult>;
-  undoText(target: TargetContext): Promise<OutputResult>;
+  insertText(text: string, target: TargetContext, signal?: AbortSignal): Promise<OutputResult>;
+  undoText(target: TargetContext, signal?: AbortSignal): Promise<OutputResult>;
   copyText(text: string): Promise<void>;
 }

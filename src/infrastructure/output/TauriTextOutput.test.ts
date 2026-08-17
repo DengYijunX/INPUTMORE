@@ -2,6 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { createTextOutput } from './TauriTextOutput';
 
 describe('TauriTextOutput', () => {
+  it('does not write or paste when the operation was cancelled before it started', async () => {
+    const calls: string[] = [];
+    const controller = new AbortController();
+    controller.abort();
+    const adapter = createTextOutput({
+      captureForeground: async () => 'window-1',
+      readClipboard: async () => { calls.push('read'); return '用户原剪贴板'; },
+      writeClipboard: async () => { calls.push('clipboard'); },
+      restoreForeground: async () => { calls.push('focus'); },
+      sendPaste: async () => { calls.push('paste'); },
+      sendUndo: async () => undefined,
+      waitForPaste: async () => undefined,
+    });
+
+    await expect(adapter.insertText('整理结果', { id: 'window-1' }, controller.signal)).resolves.toEqual({
+      ok: false,
+      code: 'cancelled',
+      message: '操作已取消',
+    });
+    expect(calls).toEqual([]);
+  });
+
   it('restores clipboard after a successful paste', async () => {
     const calls: string[] = [];
     let clipboard = '用户原剪贴板';
