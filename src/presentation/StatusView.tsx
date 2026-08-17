@@ -9,6 +9,7 @@ export function StatusView({ state, onCancel, onRetry, onInsertAnswer, onUndo }:
 }) {
   if (state.tag === 'idle') return <span role="status">就绪</span>;
   if (state.tag === 'recording') return <><span role="status">正在录音</span><p>再次按键结束</p></>;
+  if (state.tag === 'textInput') return <><span role="status">输入文本</span><button onClick={onCancel}>取消</button></>;
   if (state.tag === 'transcribing') return <><span role="status">正在识别</span><button onClick={onCancel}>取消</button></>;
   if (state.tag === 'processing') return <><span role="status">正在处理</span><button onClick={onCancel}>取消</button></>;
   if (state.tag === 'writingBack') return <span role="status">正在写入</span>;

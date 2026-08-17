@@ -41,6 +41,7 @@ describe('session machine', () => {
   it('cancels every cancellable state back to idle', () => {
     const states: SessionState[] = [
       { tag: 'recording', action: 'enhance', startedAt: 10 },
+      { tag: 'textInput', action: 'enhance', text: '原始文本' },
       { tag: 'transcribing', action: 'translate', audioId: 'audio-1' },
       { tag: 'processing', action: 'ask', requestId: 'req-1' },
       { tag: 'writingBack', action: 'enhance', text: '结果' },

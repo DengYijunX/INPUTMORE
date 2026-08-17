@@ -6,7 +6,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
   if (event.type === 'reset' && state.tag === 'completed') return IDLE;
 
   if (event.type === 'escape') {
-    if (state.tag === 'recording' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'showingAnswer') {
+    if (state.tag === 'recording' || state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'showingAnswer') {
       return IDLE;
     }
     return state;
@@ -26,6 +26,9 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
       if (event.type === 'failed') {
         return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable, ...(event.copyText ? { copyText: event.copyText } : {}) };
       }
+      return state;
+
+    case 'textInput':
       return state;
 
     case 'transcribing':

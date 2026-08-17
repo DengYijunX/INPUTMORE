@@ -18,12 +18,14 @@ import { ProcessingIndicator } from './presentation/ProcessingIndicator';
 import type { TextOutputPort, TargetContext } from './capabilities/output/TextOutputPort';
 import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
 import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
+import { shouldSubmitTextInput } from './application/textInput';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [textDraft, setTextDraft] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const floatingCardRef = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
@@ -56,6 +58,7 @@ export function App() {
     stopRequestedRef.current = false;
     targetRef.current = undefined;
     setPreviewExpanded(false);
+    setTextDraft('');
     setState({ tag: 'idle' });
   };
 
@@ -75,14 +78,56 @@ export function App() {
     });
   };
 
-  const copyCurrentErrorText = async () => {
-    if (state.tag !== 'error' || !state.copyText || !outputRef.current) return;
+  const copyText = async (text: string) => {
+    if (!text || !outputRef.current) return;
     try {
-      await outputRef.current.copyText(state.copyText);
+      await outputRef.current.copyText(text);
       setCopyFeedback(true);
       window.setTimeout(() => setCopyFeedback(false), 1200);
     } catch (error) {
       console.error('InputMore copy fallback failed', error);
+    }
+  };
+
+  const copyCurrentErrorText = async () => {
+    if (state.tag !== 'error' || !state.copyText) return;
+    await copyText(state.copyText);
+  };
+
+  const startTextRewrite = () => {
+    setCopyFeedback(false);
+    setTextDraft('');
+    setState({ tag: 'textInput', action: 'enhance', text: '' });
+  };
+
+  const submitTextRewrite = async () => {
+    const sourceText = textDraft.trim();
+    if (!sourceText) return;
+    const llmConfig = loadLlmConfig();
+    if (!llmConfig) {
+      setState({ tag: 'error', action: 'enhance', message: '文本转写需要先配置 LLM Provider', retryable: false });
+      return;
+    }
+
+    const sessionVersion = ++sessionVersionRef.current;
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    setPreviewExpanded(false);
+    setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
+
+    try {
+      const transformer = new TextTransformationService(new OpenAICompatibleLlm(llmConfig), llmConfig.model);
+      const result = await transformer.transform({ action: 'enhance', sourceText }, controller.signal);
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      const text = result.text.trim();
+      if (!text) throw new Error('LLM 未返回有效文本');
+      processingAbortRef.current = undefined;
+      setState({ tag: 'previewing', action: 'enhance', text });
+    } catch (error) {
+      processingAbortRef.current = undefined;
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      console.error('InputMore text transformation failed', error);
+      setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '文本转写失败', retryable: false });
     }
   };
 
@@ -247,13 +292,38 @@ export function App() {
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
+            {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? 'TEXT' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
+          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="文本转写" onClick={startTextRewrite}>文本</button>}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
           {state.tag === 'completed' && <button className="undo-button" type="button" onClick={undoLastWrite}>撤回</button>}
-          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
+          {(state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
+        {state.tag === 'textInput' && <section className="text-input-panel" data-testid="text-input-panel">
+          <textarea
+            autoFocus
+            value={textDraft}
+            placeholder="输入或粘贴要转写的内容"
+            onChange={(event) => {
+              setTextDraft(event.target.value);
+              setState({ tag: 'textInput', action: 'enhance', text: event.target.value });
+            }}
+            onKeyDown={(event) => {
+              if (shouldSubmitTextInput(event)) {
+                event.preventDefault();
+                void submitTextRewrite();
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelCurrentTask();
+              }
+            }}
+          />
+          <div className="text-input-footer">
+            <span>Ctrl+Enter 提交</span>
+            <button className="text-submit-button" type="button" disabled={!textDraft.trim()} onClick={() => void submitTextRewrite()}>转写</button>
+          </div>
+        </section>}
         {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p>{state.copyText && <button className="copy-text-button" type="button" onClick={() => void copyCurrentErrorText()}>{copyFeedback ? '已复制' : COPY_TEXT_LABEL}</button>}</div>}
         {state.tag === 'previewing' && (
           <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
@@ -262,6 +332,7 @@ export function App() {
             </button>
             <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
             {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
+            <button className="copy-text-button preview-copy-button" type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制文本'}</button>
           </section>
         )}
       </section>

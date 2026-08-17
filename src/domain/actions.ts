@@ -3,6 +3,7 @@ export type Action = 'rawWrite' | 'enhance' | 'translate' | 'ask';
 export type SessionState =
   | { tag: 'idle' }
   | { tag: 'recording'; action: Action; startedAt: number }
+  | { tag: 'textInput'; action: 'enhance'; text: string }
   | { tag: 'transcribing'; action: Action; audioId: string }
   | { tag: 'processing'; action: Action; requestId: string }
   | { tag: 'writingBack'; action: 'rawWrite' | 'enhance' | 'translate'; text: string }

@@ -56,6 +56,8 @@ body { overflow: hidden; }
 .capsule-status { margin-left: auto; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; }
 .cancel-button { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
 .settings-button { border: 0; color: inherit; background: transparent; opacity: 0.68; cursor: pointer; font-size: 16px; }
+.text-input-button { border: 1px solid currentColor; border-radius: 999px; padding: 3px 9px; color: inherit; background: rgba(255,255,255,0.08); font: inherit; font-size: 11px; opacity: 0.82; cursor: pointer; }
+.text-input-button:hover { background: rgba(255,255,255,0.16); opacity: 1; }
 .undo-button { border: 1px solid currentColor; border-radius: 999px; padding: 3px 10px; color: inherit; background: rgba(255,255,255,0.12); font: inherit; font-size: 11px; opacity: 0.86; cursor: pointer; }
 .undo-button:hover { background: rgba(255,255,255,0.22); opacity: 1; }
 .error-message { margin: -2px 16px 8px 46px; max-width: 250px; overflow: hidden; color: currentColor; font-size: 11px; opacity: 0.72; text-overflow: ellipsis; white-space: nowrap; }
@@ -63,6 +65,14 @@ body { overflow: hidden; }
 .error-actions .error-message { margin: 0; }
 .copy-text-button { flex: 0 0 auto; border: 1px solid currentColor; border-radius: 999px; padding: 3px 9px; color: inherit; background: rgba(255,255,255,0.12); font: inherit; font-size: 11px; opacity: 0.86; cursor: pointer; }
 .copy-text-button:hover { background: rgba(255,255,255,0.22); opacity: 1; }
+.text-input-panel { display: grid; gap: 8px; margin: 0 14px 12px 46px; }
+.text-input-panel textarea { width: 100%; min-height: 82px; resize: vertical; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 12px; padding: 9px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
+.text-input-panel textarea:focus { border-color: currentColor; background: rgba(255,255,255,0.14); }
+.text-input-panel textarea::placeholder { color: currentColor; opacity: .5; }
+.text-input-footer { display: flex; align-items: center; justify-content: space-between; color: currentColor; font-size: 10px; opacity: .62; }
+.text-submit-button { border: 1px solid currentColor; border-radius: 999px; padding: 4px 12px; color: inherit; background: rgba(255,255,255,0.14); font: inherit; font-size: 11px; cursor: pointer; }
+.text-submit-button:disabled { cursor: not-allowed; opacity: .4; }
+.preview-copy-button { display: block; margin-top: 10px; }
 .settings-panel { display: grid; gap: 8px; padding: 4px 16px 16px; color: inherit; font-size: 11px; }
 .settings-panel label { display: grid; gap: 4px; opacity: 0.8; }
 .settings-panel input, .settings-panel select { width: 100%; border: 1px solid currentColor; border-radius: 8px; padding: 7px 8px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; opacity: 0.9; }
