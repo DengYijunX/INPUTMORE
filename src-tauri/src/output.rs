@@ -23,10 +23,10 @@ pub fn restore_foreground_window(id: String) -> Result<(), String> {
     #[cfg(windows)]
     {
         use windows_sys::Win32::Foundation::HWND;
-        use windows_sys::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow};
         let hwnd = id.parse::<isize>().map_err(|_| "目标窗口句柄无效".to_string())? as HWND;
         let restored = unsafe { SetForegroundWindow(hwnd) };
-        if restored == 0 {
+        if restored == 0 || unsafe { GetForegroundWindow() } != hwnd {
             Err("无法恢复目标窗口焦点".to_string())
         } else {
             Ok(())

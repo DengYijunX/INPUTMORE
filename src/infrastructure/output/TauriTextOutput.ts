@@ -41,8 +41,8 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
         if (isCancelled(signal)) return cancelledResult;
         try {
           await deps.restoreForeground(target.id);
-        } catch {
-          // The target may already be foreground; continue with paste.
+        } catch (error) {
+          return { ok: false, code: 'target_unavailable', message: toMessage(error) };
         }
         if (isCancelled(signal)) return cancelledResult;
         await deps.sendPaste();
@@ -69,8 +69,8 @@ export function createTextOutput(deps: OutputDependencies): TextOutputPort {
       try {
         try {
           await deps.restoreForeground(target.id);
-        } catch {
-          // The target may already be foreground; continue with undo.
+        } catch (error) {
+          return { ok: false, code: 'target_unavailable', message: toMessage(error) };
         }
         if (isCancelled(signal)) return cancelledResult;
         await deps.sendUndo();

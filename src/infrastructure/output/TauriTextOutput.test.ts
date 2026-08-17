@@ -78,7 +78,7 @@ describe('TauriTextOutput', () => {
     expect(calls).toEqual(['clipboard:整理结果', 'focus', 'paste', 'clipboard:用户原剪贴板']);
   });
 
-  it('still attempts paste when focus restoration reports an error', async () => {
+  it('does not paste when focus restoration reports an error', async () => {
     const calls: string[] = [];
     let clipboard = '用户原剪贴板';
     const adapter = createTextOutput({
@@ -92,8 +92,8 @@ describe('TauriTextOutput', () => {
     });
 
     const target = await adapter.captureTarget();
-    expect(await adapter.insertText('整理结果', target)).toEqual({ ok: true });
-    expect(calls).toEqual(['clipboard:整理结果', 'focus', 'paste', 'wait', 'clipboard:用户原剪贴板']);
+    expect(await adapter.insertText('整理结果', target)).toMatchObject({ ok: false, code: 'target_unavailable' });
+    expect(calls).toEqual(['clipboard:整理结果', 'focus', 'clipboard:用户原剪贴板']);
   });
 
   it('undoes the last write in the original target window', async () => {
