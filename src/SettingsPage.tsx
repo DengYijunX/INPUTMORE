@@ -1,7 +1,7 @@
 import './App.css';
 import { useState } from 'react';
 import { getProviderPreset, PROVIDER_PRESETS } from './infrastructure/providers/providerPresets';
-import { loadAsrConfig, loadLlmConfig, saveAsrConfig, saveLlmConfig, type AsrConfig, type LlmConfig } from './infrastructure/config/providerConfig';
+import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled, saveAsrConfig, saveLlmConfig, saveRawWriteLlmEnabled, type AsrConfig, type LlmConfig } from './infrastructure/config/providerConfig';
 
 export function SettingsPage() {
   const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
@@ -12,6 +12,7 @@ export function SettingsPage() {
     providerId: 'deepseek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash', apiKey: '',
   });
   const [llmSaved, setLlmSaved] = useState(false);
+  const [rawWriteLlmEnabled, setRawWriteLlmEnabled] = useState(() => loadRawWriteLlmEnabled());
   const updateProvider = (providerId: string) => {
     const preset = getProviderPreset(providerId);
     if (preset) setAsrConfig((current) => ({ ...current, providerId, baseUrl: preset.baseUrl, model: preset.defaultModel }));
@@ -29,7 +30,9 @@ export function SettingsPage() {
       </form>
     </section>
     <section className="settings-section"><h2>文本处理模型</h2><p>ASR 转写完成后，使用该模型整理口语、补充标点并保留原意。</p>
-      <form onSubmit={(event) => { event.preventDefault(); saveLlmConfig(llmConfig); setLlmSaved(true); }}>
+      <form onSubmit={(event) => { event.preventDefault(); saveLlmConfig(llmConfig); saveRawWriteLlmEnabled(rawWriteLlmEnabled); setLlmSaved(true); }}>
+        <label className="checkbox-row"><input type="checkbox" checked={rawWriteLlmEnabled} onChange={(event) => setRawWriteLlmEnabled(event.target.checked)} /><span>原文原写使用 LLM 整理</span></label>
+        <p className="field-hint">关闭时直接写回 ASR 原文；开启后会先去除口头语、补充标点并修正明显语病。</p>
         <label>Provider<select value={llmConfig.providerId} onChange={(event) => { const preset = getProviderPreset(event.target.value); if (preset) setLlmConfig({ ...llmConfig, providerId: preset.id, baseUrl: preset.baseUrl, model: preset.defaultModel }); }}>{PROVIDER_PRESETS.filter((preset) => preset.kind === 'llm').map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
         <label>API 地址<input value={llmConfig.baseUrl} onChange={(event) => setLlmConfig({ ...llmConfig, baseUrl: event.target.value })} /></label>
         <label>模型<input value={llmConfig.model} onChange={(event) => setLlmConfig({ ...llmConfig, model: event.target.value })} /></label>

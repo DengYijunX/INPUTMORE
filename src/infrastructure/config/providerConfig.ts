@@ -1,5 +1,6 @@
 const ASR_CONFIG_KEY = 'inputmore.asr.config';
 const LLM_CONFIG_KEY = 'inputmore.llm.config';
+const RAW_WRITE_LLM_KEY = 'inputmore.rawWrite.useLlm';
 
 export type AsrConfig = {
   providerId: string;
@@ -54,4 +55,12 @@ export function saveLlmConfig(config: LlmConfig): void {
 
 export function clearLlmConfig(): void {
   localStorage.removeItem(LLM_CONFIG_KEY);
+}
+
+export function loadRawWriteLlmEnabled(): boolean {
+  return localStorage.getItem(RAW_WRITE_LLM_KEY) === 'true';
+}
+
+export function saveRawWriteLlmEnabled(enabled: boolean): void {
+  localStorage.setItem(RAW_WRITE_LLM_KEY, String(enabled));
 }

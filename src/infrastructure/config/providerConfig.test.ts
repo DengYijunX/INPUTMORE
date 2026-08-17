@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearAsrConfig, clearLlmConfig, loadAsrConfig, loadLlmConfig, saveAsrConfig, saveLlmConfig, type AsrConfig, type LlmConfig } from './providerConfig';
+import { clearAsrConfig, clearLlmConfig, loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled, saveAsrConfig, saveLlmConfig, saveRawWriteLlmEnabled, type AsrConfig, type LlmConfig } from './providerConfig';
 
 describe('provider config storage', () => {
   it('round-trips the ASR configuration without changing it', () => {
@@ -28,5 +28,13 @@ describe('provider config storage', () => {
     expect(loadLlmConfig()).toEqual(config);
     clearLlmConfig();
     expect(loadLlmConfig()).toBeUndefined();
+  });
+
+  it('defaults rawWrite LLM enhancement to off and persists the toggle', () => {
+    expect(loadRawWriteLlmEnabled()).toBe(false);
+    saveRawWriteLlmEnabled(true);
+    expect(loadRawWriteLlmEnabled()).toBe(true);
+    saveRawWriteLlmEnabled(false);
+    expect(loadRawWriteLlmEnabled()).toBe(false);
   });
 });

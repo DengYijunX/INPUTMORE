@@ -9,7 +9,9 @@ import { startDragFromPointer } from './presentation/windowDrag';
 import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
-import { loadAsrConfig } from './infrastructure/config/providerConfig';
+import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled } from './infrastructure/config/providerConfig';
+import { OpenAICompatibleLlm } from './infrastructure/providers/llm/OpenAICompatibleLlm';
+import { TextTransformationService } from './capabilities/text/TextTransformationService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
@@ -185,11 +187,19 @@ export function App() {
           : transcriptionRef.current;
         void captureRef.current?.stop()
           .then((audio) => transcription.transcribe(audio, controller.signal))
-          .then((transcript) => {
+          .then(async (transcript) => {
             if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
             setPreviewExpanded(false);
-            const text = transcript.text.trim();
+            let text = transcript.text.trim();
             if (!text) throw new Error('没有识别到有效语音');
+            if (loadRawWriteLlmEnabled()) {
+              const llmConfig = loadLlmConfig();
+              if (!llmConfig) throw new Error('已开启 LLM 整理，但尚未配置文本模型');
+              setState({ tag: 'processing', action: 'rawWrite', requestId: crypto.randomUUID() });
+              const transformer = new TextTransformationService(new OpenAICompatibleLlm(llmConfig), llmConfig.model);
+              text = (await transformer.transform({ action: 'enhance', sourceText: text }, controller.signal)).text.trim();
+              if (!text) throw new Error('LLM 未返回有效文本');
+            }
             const target = targetRef.current;
             const output = outputRef.current;
             if (!target || !output) throw new Error('没有可用的输入位置');
