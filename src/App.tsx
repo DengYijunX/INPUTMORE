@@ -24,6 +24,7 @@ export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
   const [state, setState] = useState<SessionState>({ tag: 'idle' });
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const floatingCardRef = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
@@ -34,7 +35,6 @@ export function App() {
   const sessionVersionRef = useRef(0);
   const outputRef = useRef<TextOutputPort | undefined>(undefined);
   const targetRef = useRef<TargetContext | undefined>(undefined);
-  const lastResultRef = useRef('');
 
   stateRef.current = state;
 
@@ -74,6 +74,17 @@ export function App() {
         setState({ tag: 'error', action: 'enhance', message: '撤回失败，请手动撤销', retryable: false });
       }
     });
+  };
+
+  const copyCurrentErrorText = async () => {
+    if (state.tag !== 'error' || !state.copyText || !outputRef.current) return;
+    try {
+      await outputRef.current.copyText(state.copyText);
+      setCopyFeedback(true);
+      window.setTimeout(() => setCopyFeedback(false), 1200);
+    } catch (error) {
+      console.error('InputMore copy fallback failed', error);
+    }
   };
 
   useEffect(() => {
@@ -187,7 +198,6 @@ export function App() {
           .then((result) => {
             if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
             setPreviewExpanded(false);
-            lastResultRef.current = result.text;
             const target = targetRef.current;
             const output = outputRef.current;
             if (!target || !output) throw new Error('没有可用的输入位置');
@@ -196,7 +206,7 @@ export function App() {
               if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
               if (!outputResult.ok) {
                 processingAbortRef.current = undefined;
-                setState({ tag: 'error', action: 'enhance', message: WRITEBACK_FAILURE_COPY, retryable: false });
+                setState({ tag: 'error', action: 'enhance', message: WRITEBACK_FAILURE_COPY, retryable: false, copyText: result.text });
                 return;
               }
               processingAbortRef.current = undefined;
@@ -242,7 +252,7 @@ export function App() {
           {state.tag === 'completed' && <button className="undo-button" type="button" onClick={undoLastWrite}>撤回</button>}
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
-        {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p><button className="copy-text-button" type="button" onClick={() => void outputRef.current?.copyText(lastResultRef.current)}>{COPY_TEXT_LABEL}</button></div>}
+        {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p>{state.copyText && <button className="copy-text-button" type="button" onClick={() => void copyCurrentErrorText()}>{copyFeedback ? '已复制' : COPY_TEXT_LABEL}</button>}</div>}
         {state.tag === 'previewing' && (
           <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
             <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>

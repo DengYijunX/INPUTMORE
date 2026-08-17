@@ -24,7 +24,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
         return { tag: 'transcribing', action: state.action, audioId: event.audioId };
       }
       if (event.type === 'failed') {
-        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable };
+        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable, ...(event.copyText ? { copyText: event.copyText } : {}) };
       }
       return state;
 
@@ -33,7 +33,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
         return { tag: 'processing', action: state.action, requestId: event.requestId };
       }
       if (event.type === 'failed') {
-        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable };
+        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable, ...(event.copyText ? { copyText: event.copyText } : {}) };
       }
       return state;
 
@@ -44,7 +44,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
           : { tag: 'writingBack', action: state.action, text: event.text };
       }
       if (event.type === 'failed') {
-        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable };
+        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable, ...(event.copyText ? { copyText: event.copyText } : {}) };
       }
       return state;
 
@@ -53,7 +53,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
         return { tag: 'completed', action: state.action, undoId: event.undoId };
       }
       if (event.type === 'failed') {
-        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable };
+        return { tag: 'error', action: state.action, message: event.message, retryable: event.retryable, ...(event.copyText ? { copyText: event.copyText } : {}) };
       }
       return state;
 

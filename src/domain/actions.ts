@@ -9,7 +9,7 @@ export type SessionState =
   | { tag: 'showingAnswer'; text: string; requestId: string }
   | { tag: 'previewing'; action: 'enhance' | 'translate'; text: string }
   | { tag: 'completed'; action: Action; undoId?: string }
-  | { tag: 'error'; action?: Action; message: string; retryable: boolean };
+  | { tag: 'error'; action?: Action; message: string; retryable: boolean; copyText?: string };
 
 export type SessionEvent =
   | { type: 'shortcut'; action: Action; durationMs: number; targetWindowId?: string }
@@ -22,5 +22,5 @@ export type SessionEvent =
   | { type: 'answer_inserted'; undoId?: string }
   | { type: 'completed'; undoId?: string }
   | { type: 'reset' }
-  | { type: 'failed'; message: string; retryable: boolean }
+  | { type: 'failed'; message: string; retryable: boolean; copyText?: string }
   | { type: 'escape' };

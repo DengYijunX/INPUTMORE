@@ -85,4 +85,17 @@ describe('session machine', () => {
       retryable: true,
     });
   });
+
+  it('keeps copy fallback text only on the error that owns it', () => {
+    expect(reduce(
+      { tag: 'writingBack', action: 'enhance', text: '结果' },
+      { type: 'failed', message: '写回失败', retryable: false, copyText: '结果' },
+    )).toEqual({
+      tag: 'error',
+      action: 'enhance',
+      message: '写回失败',
+      retryable: false,
+      copyText: '结果',
+    });
+  });
 });
