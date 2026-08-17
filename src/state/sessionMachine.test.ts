@@ -65,6 +65,13 @@ describe('session machine', () => {
     )).toEqual({ tag: 'idle' });
   });
 
+  it('starts a new recording immediately when shortcut is pressed from completed state', () => {
+    expect(reduce(
+      { tag: 'completed', action: 'enhance', undoId: 'undo-1' },
+      { type: 'shortcut', action: 'enhance', durationMs: 0 },
+    )).toMatchObject({ tag: 'recording', action: 'enhance' });
+  });
+
   it('preserves a retryable failure', () => {
     const state: SessionState = { tag: 'processing', action: 'translate', requestId: 'req-3' };
     expect(reduce(state, {

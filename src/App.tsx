@@ -147,7 +147,7 @@ export function App() {
       const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
       if (!sessionEvent) return;
 
-      if (sessionEvent.type === 'shortcut' && current.tag === 'idle') {
+      if (sessionEvent.type === 'shortcut' && (current.tag === 'idle' || current.tag === 'completed')) {
         const sessionVersion = ++sessionVersionRef.current;
         if (!sessionEvent.targetWindowId) {
           setState({ tag: 'error', action: 'enhance', message: '没有可用的输入位置', retryable: true });

@@ -73,6 +73,9 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
       return state;
 
     case 'completed':
+      if (event.type === 'shortcut') {
+        return { tag: 'recording', action: event.action, startedAt: Date.now() };
+      }
       return state;
   }
 }
