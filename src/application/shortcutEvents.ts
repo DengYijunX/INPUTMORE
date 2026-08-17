@@ -1,7 +1,7 @@
 export const DEFAULT_ENHANCE_SHORTCUT = 'Right Alt';
 
 export type ShortcutEvent = {
-  action: 'enhance' | 'translate' | 'ask';
+  action: 'rawWrite' | 'enhance' | 'translate' | 'ask';
   phase: 'pressed' | 'released';
   targetWindowId?: string;
 };

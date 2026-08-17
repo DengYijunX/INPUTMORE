@@ -11,6 +11,7 @@ export class InputProcessingPipeline {
   async run(audio: Blob, action: Action, signal?: AbortSignal): Promise<TransformResult> {
     const transcript = await this.transcriber.transcribe(audio, signal);
     if (!transcript.text.trim()) throw new Error('没有识别到有效语音');
+    if (action === 'rawWrite') return { text: transcript.text.trim() };
     return this.transformer.transform({ action, sourceText: transcript.text.trim() }, signal);
   }
 }

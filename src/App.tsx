@@ -10,9 +10,6 @@ import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
 import { loadAsrConfig } from './infrastructure/config/providerConfig';
-import { loadLlmConfig } from './infrastructure/config/providerConfig';
-import { OpenAICompatibleLlm } from './infrastructure/providers/llm/OpenAICompatibleLlm';
-import { TextTransformationService } from './capabilities/text/TextTransformationService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
@@ -40,7 +37,7 @@ export function App() {
 
   const openSettings = async () => {
     if (!('__TAURI_INTERNALS__' in window)) {
-      setState({ tag: 'error', action: 'enhance', message: '设置窗口只能在桌面应用中打开', retryable: false });
+      setState({ tag: 'error', action: 'rawWrite', message: '设置窗口只能在桌面应用中打开', retryable: false });
       return;
     }
     const existing = await WebviewWindow.getByLabel('settings');
@@ -71,7 +68,7 @@ export function App() {
       if (result.ok) {
         setState({ tag: 'idle' });
       } else {
-        setState({ tag: 'error', action: 'enhance', message: '撤回失败，请手动撤销', retryable: false });
+        setState({ tag: 'error', action: 'rawWrite', message: '撤回失败，请手动撤销', retryable: false });
       }
     });
   };
@@ -153,7 +150,7 @@ export function App() {
     }
 
     let unlisten: (() => void) | undefined;
-    void listen<{ action: 'enhance'; phase: 'pressed' | 'released'; targetWindowId?: string }>('inputmore://shortcut', (event) => {
+    void listen<{ action: 'rawWrite'; phase: 'pressed' | 'released'; targetWindowId?: string }>('inputmore://shortcut', (event) => {
       const current = stateRef.current;
       const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
       if (!sessionEvent) return;
@@ -161,7 +158,7 @@ export function App() {
       if (sessionEvent.type === 'shortcut' && (current.tag === 'idle' || current.tag === 'completed')) {
         const sessionVersion = ++sessionVersionRef.current;
         if (!sessionEvent.targetWindowId) {
-          setState({ tag: 'error', action: 'enhance', message: '没有可用的输入位置', retryable: true });
+          setState({ tag: 'error', action: 'rawWrite', message: '没有可用的输入位置', retryable: true });
           return;
         }
         targetRef.current = { id: sessionEvent.targetWindowId };
@@ -171,7 +168,7 @@ export function App() {
           console.error('InputMore microphone start failed', error);
           captureRef.current?.cancel();
           targetRef.current = undefined;
-          setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
+          setState({ tag: 'error', action: 'rawWrite', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
         });
         return;
       }
@@ -189,35 +186,30 @@ export function App() {
         void captureRef.current?.stop()
           .then((audio) => transcription.transcribe(audio, controller.signal))
           .then((transcript) => {
-            const llmConfig = loadLlmConfig();
-            if (!llmConfig) throw new Error('文本处理服务未配置，请在设置中配置 LLM Provider');
-            setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
-            const transformer = new TextTransformationService(new OpenAICompatibleLlm(llmConfig), llmConfig.model);
-            return transformer.transform({ action: 'enhance', sourceText: transcript.text }, controller.signal);
-          })
-          .then((result) => {
             if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
             setPreviewExpanded(false);
+            const text = transcript.text.trim();
+            if (!text) throw new Error('没有识别到有效语音');
             const target = targetRef.current;
             const output = outputRef.current;
             if (!target || !output) throw new Error('没有可用的输入位置');
-            setState({ tag: 'writingBack', action: 'enhance', text: result.text });
-            return output.insertText(result.text, target, controller.signal).then((outputResult) => {
+            setState({ tag: 'writingBack', action: 'rawWrite', text });
+            return output.insertText(text, target, controller.signal).then((outputResult) => {
               if (sessionVersion !== sessionVersionRef.current || controller.signal.aborted) return;
               if (!outputResult.ok) {
                 processingAbortRef.current = undefined;
-                setState({ tag: 'error', action: 'enhance', message: WRITEBACK_FAILURE_COPY, retryable: false, copyText: result.text });
+                setState({ tag: 'error', action: 'rawWrite', message: WRITEBACK_FAILURE_COPY, retryable: false, copyText: text });
                 return;
               }
               processingAbortRef.current = undefined;
-              setState(reduce({ tag: 'writingBack', action: 'enhance', text: result.text }, { type: 'writeback_succeeded', undoId: outputResult.undoId }));
+              setState(reduce({ tag: 'writingBack', action: 'rawWrite', text }, { type: 'writeback_succeeded', undoId: outputResult.undoId }));
             });
           })
           .catch((error) => {
             processingAbortRef.current = undefined;
             if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
             console.error('InputMore transcription failed', error);
-            setState({ tag: 'error', action: 'enhance', message: error instanceof Error ? error.message : '转录失败', retryable: false });
+            setState({ tag: 'error', action: 'rawWrite', message: error instanceof Error ? error.message : '转录失败', retryable: false });
           });
       }
     }).then((cleanup) => {

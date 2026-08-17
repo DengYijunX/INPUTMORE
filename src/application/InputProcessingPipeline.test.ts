@@ -22,4 +22,14 @@ describe('InputProcessingPipeline', () => {
     expect(transformer.request).toMatchObject({ action: 'enhance', sourceText: '嗯 我们下周再讨论' });
     expect(result).toEqual({ text: '我们下周再讨论。' });
   });
+
+  it('returns raw transcription without invoking the transformer for rawWrite', async () => {
+    const transformer = new StubTransformer();
+    const pipeline = new InputProcessingPipeline(new StubTranscriber(), transformer);
+
+    const result = await pipeline.run(new Blob(['audio']), 'rawWrite');
+
+    expect(transformer.request).toBeUndefined();
+    expect(result).toEqual({ text: '嗯 我们下周再讨论' });
+  });
 });

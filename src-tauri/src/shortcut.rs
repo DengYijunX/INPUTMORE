@@ -64,7 +64,7 @@ unsafe extern "system" fn keyboard_proc(
                 let _ = app.emit(
                     "inputmore://shortcut",
                     serde_json::json!({
-                        "action": "enhance",
+                        "action": "rawWrite",
                         "phase": phase,
                         "targetWindowId": target_window_id,
                     }),

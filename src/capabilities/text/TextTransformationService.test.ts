@@ -12,6 +12,15 @@ class RecordingProvider implements LlmProvider {
 }
 
 describe('TextTransformationService', () => {
+  it('returns raw input without calling the model for rawWrite', async () => {
+    const provider = new RecordingProvider();
+    const service = new TextTransformationService(provider, 'configured-model');
+
+    await expect(service.transform({ action: 'rawWrite', sourceText: '原始内容' }))
+      .resolves.toEqual({ text: '原始内容' });
+    expect(provider.lastRequest).toBeUndefined();
+  });
+
   it('asks the active model for conservative transcription enhancement', async () => {
     const provider = new RecordingProvider();
     const service = new TextTransformationService(provider, 'configured-model');

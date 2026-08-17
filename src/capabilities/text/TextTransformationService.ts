@@ -5,6 +5,7 @@ export class TextTransformationService implements TextTransformer {
   constructor(private readonly provider: LlmProvider, private readonly model: string) {}
 
   async transform(request: TransformRequest, signal?: AbortSignal): Promise<TransformResult> {
+    if (request.action === 'rawWrite') return { text: request.sourceText.trim() };
     if (request.action === 'translate' && !request.targetLanguage?.trim()) {
       throw new Error('翻译任务需要目标语言');
     }

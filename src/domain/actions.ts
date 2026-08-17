@@ -1,13 +1,13 @@
-export type Action = 'enhance' | 'translate' | 'ask';
+export type Action = 'rawWrite' | 'enhance' | 'translate' | 'ask';
 
 export type SessionState =
   | { tag: 'idle' }
   | { tag: 'recording'; action: Action; startedAt: number }
   | { tag: 'transcribing'; action: Action; audioId: string }
   | { tag: 'processing'; action: Action; requestId: string }
-  | { tag: 'writingBack'; action: 'enhance' | 'translate'; text: string }
+  | { tag: 'writingBack'; action: 'rawWrite' | 'enhance' | 'translate'; text: string }
   | { tag: 'showingAnswer'; text: string; requestId: string }
-  | { tag: 'previewing'; action: 'enhance' | 'translate'; text: string }
+  | { tag: 'previewing'; action: 'rawWrite' | 'enhance' | 'translate'; text: string }
   | { tag: 'completed'; action: Action; undoId?: string }
   | { tag: 'error'; action?: Action; message: string; retryable: boolean; copyText?: string };
 
