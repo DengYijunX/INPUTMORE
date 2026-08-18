@@ -1,8 +1,10 @@
 # AI Input Layer MVP Implementation Plan
 
+> **Current status (2026-08-18):** This is a historical implementation plan. The current product boundary is documented in `docs/product-status-and-roadmap.md`. Raw Write and Enhance are implemented; Translation and Search/Ask remain future work. Do not treat the original unchecked task list as the current execution queue.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Windows desktop MVP that turns spoken input into lightly polished text, writes it back to the active application, and provides separate Translation and Ask actions through a shared model Provider interface.
+**Original goal:** Build a Windows desktop MVP that turns spoken input into lightly polished text, writes it back to the active application, and provides separate Translation and Ask actions through a shared model Provider interface.
 
 **Architecture:** Use a Tauri 2 desktop shell with a React/TypeScript floating window and a Rust native bridge. Organize the application around domain rules, application use cases, capability ports, and infrastructure adapters: `presentation` emits user events, `application` orchestrates use cases, `domain` owns pure state/policy, `capabilities` exposes reusable AI operations, and `infrastructure`/Tauri adapters implement providers and OS integration. No UI or use case imports a concrete LLM, ASR, search, or Windows API implementation.
 
@@ -416,7 +418,8 @@ git commit -m "test: cover settings permissions and desktop flows"
 
 ## Self-Review Checklist
 
-- Spec coverage: default optimized transcription is covered by Tasks 2–7; translation and Ask by Tasks 2–4 and 7; floating state feedback by Tasks 2–3; write-back, undo, clipboard fallback, and permissions by Tasks 6 and 8; single active Provider by Task 4; failure recovery by Task 7.
-- Scope: no Prompt auto-rewrite, multi-model routing, chat history, or default web retrieval is scheduled.
+- Historical coverage: the original plan covered default optimized transcription, translation, Ask, floating state feedback, write-back, and Provider abstraction.
+- Current scope: Raw Write and Enhance are implemented; Translation and Search/Ask are not yet implemented and should be planned separately.
+- Current behavior: Raw Write is the default Right Alt flow; Enhance is explicitly triggered by the Text entry or Ctrl + Right Alt selected-text shortcut and previews results for manual copy.
 - Consistency: `Action` uses `enhance | translate | ask` throughout; `TransformRequest` is the only task input; the Provider interface is independent of UI and native bridge.
 - Security: API keys are local-only and excluded from logs/events; audio is released on terminal paths; Provider failover is opt-in and absent from MVP.
