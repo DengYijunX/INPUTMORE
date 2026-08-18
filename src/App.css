@@ -60,7 +60,7 @@ body { overflow: hidden; }
 .text-input-button:hover { background: rgba(255,255,255,0.16); opacity: 1; }
 .undo-button { border: 1px solid currentColor; border-radius: 999px; padding: 3px 10px; color: inherit; background: rgba(255,255,255,0.12); font: inherit; font-size: 11px; opacity: 0.86; cursor: pointer; }
 .undo-button:hover { background: rgba(255,255,255,0.22); opacity: 1; }
-.error-message { margin: -2px 16px 8px 46px; max-width: 250px; overflow: hidden; color: currentColor; font-size: 11px; opacity: 0.72; text-overflow: ellipsis; white-space: nowrap; }
+.error-message { margin: -2px 16px 8px 46px; max-width: 280px; overflow-wrap: anywhere; color: currentColor; font-size: 11px; line-height: 1.4; opacity: 0.72; white-space: normal; }
 .error-actions { display: flex; align-items: center; gap: 10px; margin: -2px 16px 8px 46px; min-width: 0; }
 .error-actions .error-message { margin: 0; }
 .copy-text-button { flex: 0 0 auto; border: 1px solid currentColor; border-radius: 999px; padding: 3px 9px; color: inherit; background: rgba(255,255,255,0.12); font: inherit; font-size: 11px; opacity: 0.86; cursor: pointer; }

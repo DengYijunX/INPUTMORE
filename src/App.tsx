@@ -21,6 +21,7 @@ import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCop
 import { shouldSubmitTextInput } from './application/textInput';
 import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
 import { canStartShortcut } from './application/shortcutAvailability';
+import { describeSelectionError } from './application/selectionErrors';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -164,7 +165,7 @@ export function App() {
       processingAbortRef.current = undefined;
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       console.error('InputMore selected text capture failed', error);
-      setState({ tag: 'error', action: 'enhance', message: '读取选中文字失败', retryable: false });
+      setState({ tag: 'error', action: 'enhance', message: describeSelectionError(error), retryable: false });
     }
   };
 
