@@ -15,6 +15,7 @@ pub fn run() {
             output::get_clipboard_sequence,
             output::restore_foreground_window,
             output::send_copy,
+            output::capture_selected_text,
             output::send_paste,
             output::send_undo,
         ])

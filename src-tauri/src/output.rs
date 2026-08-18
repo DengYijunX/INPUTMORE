@@ -123,6 +123,82 @@ pub fn send_copy() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn capture_selected_text(target_window_id: String) -> Result<Option<String>, String> {
+    #[cfg(windows)]
+    {
+        restore_foreground_window(target_window_id)?;
+        let before = clipboard_win::seq_num();
+        send_copy()?;
+
+        for _ in 0..60 {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            if clipboard_win::seq_num() != before {
+                return read_native_clipboard_text();
+            }
+        }
+        Ok(None)
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = target_window_id;
+        Err("当前平台暂不支持读取系统选区".to_string())
+    }
+}
+
+#[cfg(windows)]
+fn read_native_clipboard_text() -> Result<Option<String>, String> {
+    use clipboard_win::{formats, get, Clipboard, Format};
+
+    let _clipboard = Clipboard::new_attempts(10).map_err(|error| error.to_string())?;
+    if clipboard_win::raw::is_format_avail(formats::CF_UNICODETEXT) {
+        let text: String = get(formats::Unicode).map_err(|error| error.to_string())?;
+        return Ok((!text.trim().is_empty()).then_some(text));
+    }
+
+    if let Some(html_format) = formats::Html::new() {
+        if html_format.is_format_avail() {
+            let html: String = get(html_format).map_err(|error| error.to_string())?;
+            let text = html_fragment_to_text(&html);
+            return Ok((!text.trim().is_empty()).then_some(text));
+        }
+    }
+
+    Ok(None)
+}
+
+fn html_fragment_to_text(html: &str) -> String {
+    let mut text = String::new();
+    let mut chars = html.chars().peekable();
+    while let Some(character) = chars.next() {
+        if character == '<' {
+            let mut tag = String::new();
+            for tag_character in chars.by_ref() {
+                if tag_character == '>' { break; }
+                tag.push(tag_character);
+            }
+            let tag = tag.trim().to_ascii_lowercase();
+            if tag.starts_with("/p") || tag.starts_with("p") || tag.starts_with("br") || tag.starts_with("/div") || tag.starts_with("/li") {
+                if !text.ends_with('\n') { text.push('\n'); }
+            }
+            continue;
+        }
+        text.push(character);
+    }
+
+    text.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[tauri::command]
 pub fn send_undo() -> Result<(), String> {
     #[cfg(windows)]
     {
@@ -145,5 +221,13 @@ pub fn send_undo() -> Result<(), String> {
     #[cfg(not(windows))]
     {
         Err("当前平台暂不支持系统级撤回".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn converts_html_fragment_to_readable_text() {
+        assert_eq!(super::html_fragment_to_text("<p>Hello <b>world</b></p><p>下一段 &amp; 内容</p>"), "Hello world\n下一段 & 内容");
     }
 }
