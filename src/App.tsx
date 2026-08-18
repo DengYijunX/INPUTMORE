@@ -16,6 +16,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
 import { formatDuration } from './presentation/formatDuration';
+import { createTimingRecord, type TimingFlow } from './application/timing';
 import type { TextOutputPort, TargetContext } from './capabilities/output/TextOutputPort';
 import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
 import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
@@ -105,7 +106,12 @@ export function App() {
     setState({ tag: 'textInput', action: 'enhance', text: '' });
   };
 
-  const transformTextToPreview = async (sourceText: string, sessionVersion: number, controller: AbortController) => {
+  const transformTextToPreview = async (
+    sourceText: string,
+    sessionVersion: number,
+    controller: AbortController,
+    timing?: { flow: TimingFlow; startedAt: number; captureMs?: number },
+  ) => {
     const llmConfig = loadLlmConfig();
     if (!llmConfig) {
       processingAbortRef.current = undefined;
@@ -124,6 +130,14 @@ export function App() {
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       const text = result.text.trim();
       if (!text) throw new Error('LLM 未返回有效文本');
+      if (timing) {
+        console.info('[InputMore timing]', createTimingRecord({
+          flow: timing.flow,
+          totalMs: performance.now() - timing.startedAt,
+          captureMs: timing.captureMs,
+          modelMs: durationMs,
+        }));
+      }
       processingAbortRef.current = undefined;
       setState({ tag: 'previewing', action: 'enhance', text, durationMs });
     } catch (error) {
@@ -140,7 +154,10 @@ export function App() {
     const sessionVersion = ++sessionVersionRef.current;
     const controller = new AbortController();
     processingAbortRef.current = controller;
-    await transformTextToPreview(sourceText, sessionVersion, controller);
+    await transformTextToPreview(sourceText, sessionVersion, controller, {
+      flow: 'manual-text',
+      startedAt: performance.now(),
+    });
   };
 
   const startSelectedTextRewrite = async (target: TargetContext, sessionVersion: number) => {
@@ -152,19 +169,31 @@ export function App() {
     }
 
     const controller = new AbortController();
+    const startedAt = performance.now();
     processingAbortRef.current = controller;
     setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
     try {
       const selectedText = await selectedTextInput.captureSelectedText(target, controller.signal);
+      const captureMs = performance.now() - startedAt;
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       if (!selectedText) {
+        console.info('[InputMore timing]', createTimingRecord({
+          flow: 'selected-text',
+          totalMs: captureMs,
+          captureMs,
+          modelMs: 0,
+        }));
         processingAbortRef.current = undefined;
         targetRef.current = undefined;
         setState({ tag: 'error', action: 'enhance', message: '未检测到选中文字', retryable: false });
         return;
       }
       targetRef.current = undefined;
-      await transformTextToPreview(selectedText, sessionVersion, controller);
+      await transformTextToPreview(selectedText, sessionVersion, controller, {
+        flow: 'selected-text',
+        startedAt,
+        captureMs,
+      });
     } catch (error) {
       processingAbortRef.current = undefined;
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
