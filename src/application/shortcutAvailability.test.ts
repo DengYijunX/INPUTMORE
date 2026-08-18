@@ -6,5 +6,6 @@ describe('shortcut availability', () => {
     expect(canStartShortcut({ tag: 'error', action: 'enhance', message: '未检测到选中文字', retryable: false }, 'enhance')).toBe(true);
     expect(canStartShortcut({ tag: 'error', action: 'rawWrite', message: '麦克风不可用', retryable: true }, 'enhance')).toBe(false);
     expect(canStartShortcut({ tag: 'error', action: 'enhance', message: '未检测到选中文字', retryable: false }, 'rawWrite')).toBe(false);
+    expect(canStartShortcut({ tag: 'previewing', action: 'enhance', text: '上一次结果' }, 'enhance')).toBe(true);
   });
 });

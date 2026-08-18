@@ -30,6 +30,22 @@ describe('selected text input', () => {
     expect(clipboard).toBe('原剪贴板');
   });
 
+  it('uses a temporary sentinel so an unchanged copy cannot expose stale clipboard text', async () => {
+    let clipboard = '旧的剪贴板内容';
+    let copiedClipboard = '';
+    const input = createSelectedTextInput({
+      readClipboard: async () => clipboard,
+      writeClipboard: async (text) => { clipboard = text; },
+      restoreForeground: async () => undefined,
+      sendCopy: async () => { copiedClipboard = clipboard; },
+      waitForCopy: async () => undefined,
+    });
+
+    await expect(input.captureSelectedText({ id: 'window-1' })).resolves.toBeNull();
+    expect(copiedClipboard).toMatch(/^__INPUTMORE_SELECTION_/);
+    expect(clipboard).toBe('旧的剪贴板内容');
+  });
+
   it('restores the previous clipboard when copying fails', async () => {
     let clipboard = '原剪贴板';
     const input = createSelectedTextInput({

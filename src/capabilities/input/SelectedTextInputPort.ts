@@ -19,9 +19,12 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
       if (signal?.aborted) return null;
 
       const previous = await deps.readClipboard();
-      const sequenceBefore = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
+      const sentinel = `__INPUTMORE_SELECTION_${crypto.randomUUID()}__`;
+      let sequenceBefore: number | undefined;
       let selected = '';
       try {
+        await deps.writeClipboard(sentinel);
+        sequenceBefore = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
         if (signal?.aborted) return null;
         await deps.restoreForeground(target.id);
         if (signal?.aborted) return null;
@@ -30,6 +33,7 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
         if (signal?.aborted) return null;
         selected = (await deps.readClipboard()).trim();
         const sequenceAfter = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
+        if (selected === sentinel) return null;
         if (sequenceBefore !== undefined && sequenceAfter === sequenceBefore) return null;
         return selected && selected !== previous.trim() ? selected : null;
       } finally {
