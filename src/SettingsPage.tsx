@@ -2,6 +2,7 @@ import './App.css';
 import { useState } from 'react';
 import { getProviderPreset, PROVIDER_PRESETS } from './infrastructure/providers/providerPresets';
 import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled, saveAsrConfig, saveLlmConfig, saveRawWriteLlmEnabled, type AsrConfig, type LlmConfig } from './infrastructure/config/providerConfig';
+import { loadSearchConfig, saveSearchConfig, type SearchConfig } from './infrastructure/config/searchConfig';
 
 export function SettingsPage() {
   const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
@@ -13,6 +14,10 @@ export function SettingsPage() {
   });
   const [llmSaved, setLlmSaved] = useState(false);
   const [rawWriteLlmEnabled, setRawWriteLlmEnabled] = useState(() => loadRawWriteLlmEnabled());
+  const [searchConfig, setSearchConfig] = useState<SearchConfig>(() => loadSearchConfig() ?? {
+    providerId: 'zhipu-web-search', endpoint: 'https://open.bigmodel.cn/api/paas/v4/web_search', apiKey: '',
+  });
+  const [searchSaved, setSearchSaved] = useState(false);
   const updateProvider = (providerId: string) => {
     const preset = getProviderPreset(providerId);
     if (preset) setAsrConfig((current) => ({ ...current, providerId, baseUrl: preset.baseUrl, model: preset.defaultModel }));
@@ -38,6 +43,14 @@ export function SettingsPage() {
         <label>模型<input value={llmConfig.model} onChange={(event) => setLlmConfig({ ...llmConfig, model: event.target.value })} /></label>
         <label>API Key<input type="password" value={llmConfig.apiKey} onChange={(event) => setLlmConfig({ ...llmConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
         <button className="save-button" type="submit">{llmSaved ? '已保存' : '保存文本模型配置'}</button>
+      </form>
+    </section>
+    <section className="settings-section"><h2>网页检索</h2><p>使用智谱 Web Search 获取网页结果，再由文本模型整理答案和来源。</p>
+      <form onSubmit={(event) => { event.preventDefault(); saveSearchConfig(searchConfig); setSearchSaved(true); }}>
+        <label>Provider<input value="智谱 Web Search" readOnly /></label>
+        <label>API 地址<input value={searchConfig.endpoint} onChange={(event) => setSearchConfig({ ...searchConfig, endpoint: event.target.value })} /></label>
+        <label>API Key<input type="password" value={searchConfig.apiKey} onChange={(event) => setSearchConfig({ ...searchConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
+        <button className="save-button" type="submit">{searchSaved ? '已保存' : '保存检索配置'}</button>
       </form>
     </section>
     <section className="settings-section muted"><h2>更多设置</h2><p>快捷键、输出行为、历史记录和文本模型配置将在后续版本加入。</p></section>

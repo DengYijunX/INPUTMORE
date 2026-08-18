@@ -43,7 +43,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
     case 'processing':
       if (event.type === 'result_ready') {
         return state.action === 'ask'
-          ? { tag: 'showingAnswer', text: event.text, requestId: state.requestId }
+          ? { tag: 'showingAnswer', text: event.text, requestId: state.requestId, ...(event.sources ? { sources: event.sources } : {}) }
           : { tag: 'writingBack', action: state.action, text: event.text };
       }
       if (event.type === 'failed') {

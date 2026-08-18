@@ -10,6 +10,7 @@ import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
 import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled } from './infrastructure/config/providerConfig';
+import { loadSearchConfig } from './infrastructure/config/searchConfig';
 import { OpenAICompatibleLlm } from './infrastructure/providers/llm/OpenAICompatibleLlm';
 import { TextTransformationService } from './capabilities/text/TextTransformationService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -24,6 +25,8 @@ import { shouldSubmitTextInput } from './application/textInput';
 import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
 import { canStartShortcut } from './application/shortcutAvailability';
 import { describeSelectionError } from './application/selectionErrors';
+import { RetrievalService } from './capabilities/retrieval/RetrievalService';
+import { ZhipuWebSearch } from './infrastructure/providers/search/ZhipuWebSearch';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -106,6 +109,12 @@ export function App() {
     setState({ tag: 'textInput', action: 'enhance', text: '' });
   };
 
+  const startRetrieval = () => {
+    setCopyFeedback(false);
+    setTextDraft('');
+    setState({ tag: 'textInput', action: 'ask', text: '' });
+  };
+
   const transformTextToPreview = async (
     sourceText: string,
     sessionVersion: number,
@@ -158,6 +167,43 @@ export function App() {
       flow: 'manual-text',
       startedAt: performance.now(),
     });
+  };
+
+  const submitRetrieval = async () => {
+    const sourceText = textDraft.trim();
+    if (!sourceText) return;
+    const searchConfig = loadSearchConfig();
+    const llmConfig = loadLlmConfig();
+    if (!searchConfig) {
+      setState({ tag: 'error', action: 'ask', message: '网页检索需要先配置 Search Provider', retryable: false });
+      return;
+    }
+    if (!llmConfig) {
+      setState({ tag: 'error', action: 'ask', message: '网页检索需要先配置 LLM Provider', retryable: false });
+      return;
+    }
+
+    const sessionVersion = ++sessionVersionRef.current;
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    setCopyFeedback(false);
+    setState({ tag: 'processing', action: 'ask', requestId: crypto.randomUUID() });
+    try {
+      const service = new RetrievalService({
+        search: new ZhipuWebSearch({ apiKey: searchConfig.apiKey, endpoint: searchConfig.endpoint }),
+        llm: new OpenAICompatibleLlm(llmConfig),
+        model: llmConfig.model,
+      });
+      const result = await service.retrieve(sourceText, controller.signal);
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      processingAbortRef.current = undefined;
+      setState({ tag: 'showingAnswer', text: result.answer, requestId: crypto.randomUUID(), sources: result.sources });
+    } catch (error) {
+      processingAbortRef.current = undefined;
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      console.error('InputMore retrieval failed', error);
+      setState({ tag: 'error', action: 'ask', message: error instanceof Error ? error.message : '网页检索失败', retryable: false });
+    }
   };
 
   const startSelectedTextRewrite = async (target: TargetContext, sessionVersion: number) => {
@@ -373,27 +419,28 @@ export function App() {
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? 'TEXT' : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
+            {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? (state.action === 'ask' ? 'SEARCH' : 'TEXT') : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'showingAnswer' ? 'ANSWER' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
           {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="文本转写" onClick={startTextRewrite}>文本</button>}
+          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="网页检索" onClick={startRetrieval}>检索</button>}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
           {state.tag === 'completed' && <button className="undo-button" type="button" onClick={undoLastWrite}>撤回</button>}
-          {(state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
+          {(state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'showingAnswer' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
         </div>
         {state.tag === 'textInput' && <section className="text-input-panel" data-testid="text-input-panel">
           <textarea
             autoFocus
             value={textDraft}
-            placeholder="输入或粘贴要转写的内容"
+            placeholder={state.action === 'ask' ? '输入要检索的问题' : '输入或粘贴要转写的内容'}
             onChange={(event) => {
               setTextDraft(event.target.value);
-              setState({ tag: 'textInput', action: 'enhance', text: event.target.value });
+              setState({ tag: 'textInput', action: state.action, text: event.target.value });
             }}
             onKeyDown={(event) => {
               if (shouldSubmitTextInput(event)) {
                 event.preventDefault();
-                void submitTextRewrite();
+                void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite());
               } else if (event.key === 'Escape') {
                 event.preventDefault();
                 cancelCurrentTask();
@@ -402,7 +449,7 @@ export function App() {
           />
           <div className="text-input-footer">
             <span>Ctrl+Enter 提交</span>
-            <button className="text-submit-button" type="button" disabled={!textDraft.trim()} onClick={() => void submitTextRewrite()}>转写</button>
+            <button className="text-submit-button" type="button" disabled={!textDraft.trim()} onClick={() => void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite())}>{state.action === 'ask' ? '检索' : '转写'}</button>
           </div>
         </section>}
         {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p>{state.copyText && <button className="copy-text-button" type="button" onClick={() => void copyCurrentErrorText()}>{copyFeedback ? '已复制' : COPY_TEXT_LABEL}</button>}</div>}
@@ -415,6 +462,13 @@ export function App() {
             {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
             {previewExpanded && typeof state.durationMs === 'number' && <p className="preview-duration">处理耗时：{formatDuration(state.durationMs)}</p>}
             <button className="copy-text-button preview-copy-button" type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制文本'}</button>
+          </section>
+        )}
+        {state.tag === 'showingAnswer' && (
+          <section className="retrieval-panel" data-testid="retrieval-panel">
+            <header className="retrieval-panel-header"><span>检索结果</span><button type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制答案'}</button></header>
+            <p className="retrieval-answer">{state.text}</p>
+            {!!state.sources?.length && <section className="retrieval-sources"><h3>来源</h3>{state.sources.map((source, index) => <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noreferrer"><strong>[{index + 1}] {source.title}</strong><span>{source.sourceName ?? source.url}</span></a>)}</section>}
           </section>
         )}
       </section>
