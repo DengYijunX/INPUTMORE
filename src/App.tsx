@@ -19,6 +19,7 @@ import type { TextOutputPort, TargetContext } from './capabilities/output/TextOu
 import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
 import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
 import { shouldSubmitTextInput } from './application/textInput';
+import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -35,6 +36,7 @@ export function App() {
   const stopRequestedRef = useRef(false);
   const sessionVersionRef = useRef(0);
   const outputRef = useRef<TextOutputPort | undefined>(undefined);
+  const selectedTextInputRef = useRef<ReturnType<typeof createTauriSelectedTextInput> | undefined>(undefined);
   const targetRef = useRef<TargetContext | undefined>(undefined);
 
   stateRef.current = state;
@@ -100,18 +102,14 @@ export function App() {
     setState({ tag: 'textInput', action: 'enhance', text: '' });
   };
 
-  const submitTextRewrite = async () => {
-    const sourceText = textDraft.trim();
-    if (!sourceText) return;
+  const transformTextToPreview = async (sourceText: string, sessionVersion: number, controller: AbortController) => {
     const llmConfig = loadLlmConfig();
     if (!llmConfig) {
+      processingAbortRef.current = undefined;
       setState({ tag: 'error', action: 'enhance', message: '文本转写需要先配置 LLM Provider', retryable: false });
       return;
     }
 
-    const sessionVersion = ++sessionVersionRef.current;
-    const controller = new AbortController();
-    processingAbortRef.current = controller;
     setPreviewExpanded(false);
     setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
 
@@ -131,6 +129,15 @@ export function App() {
     }
   };
 
+  const submitTextRewrite = async () => {
+    const sourceText = textDraft.trim();
+    if (!sourceText) return;
+    const sessionVersion = ++sessionVersionRef.current;
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    await transformTextToPreview(sourceText, sessionVersion, controller);
+  };
+
   useEffect(() => {
     const saved = loadAsrConfig();
     if (saved) transcriptionRef.current = new TranscriptionService(createAsrProvider(saved));
@@ -140,6 +147,7 @@ export function App() {
     if (!('__TAURI_INTERNALS__' in window)) return;
 
     outputRef.current = createTauriTextOutput();
+    selectedTextInputRef.current = createTauriSelectedTextInput();
     let frame = 0;
     let resizing = false;
     const resizeToContent = () => {
@@ -208,15 +216,40 @@ export function App() {
           setState({ tag: 'error', action: 'rawWrite', message: '没有可用的输入位置', retryable: true });
           return;
         }
-        targetRef.current = { id: sessionEvent.targetWindowId };
+        const target = { id: sessionEvent.targetWindowId };
+        targetRef.current = target;
         stopRequestedRef.current = false;
-        setState(reduce(current, sessionEvent));
-        void captureRef.current?.start().catch((error) => {
-          console.error('InputMore microphone start failed', error);
-          captureRef.current?.cancel();
-          targetRef.current = undefined;
-          setState({ tag: 'error', action: 'rawWrite', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
-        });
+        const startRecording = () => {
+          processingAbortRef.current = undefined;
+          setState(reduce(current, sessionEvent));
+          void captureRef.current?.start().catch((error) => {
+            console.error('InputMore microphone start failed', error);
+            captureRef.current?.cancel();
+            targetRef.current = undefined;
+            setState({ tag: 'error', action: 'rawWrite', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
+          });
+        };
+
+        const selectionController = new AbortController();
+        processingAbortRef.current = selectionController;
+        const selectedTextInput = selectedTextInputRef.current;
+        if (!selectedTextInput) {
+          startRecording();
+          return;
+        }
+        void selectedTextInput.captureSelectedText(target, selectionController.signal)
+          .then(async (selectedText) => {
+            if (sessionVersion !== sessionVersionRef.current || selectionController.signal.aborted) return;
+            if (!selectedText) {
+              startRecording();
+              return;
+            }
+            targetRef.current = undefined;
+            await transformTextToPreview(selectedText, sessionVersion, selectionController);
+          })
+          .catch(() => {
+            if (sessionVersion === sessionVersionRef.current && !selectionController.signal.aborted) startRecording();
+          });
         return;
       }
 

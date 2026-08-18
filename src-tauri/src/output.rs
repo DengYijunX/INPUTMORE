@@ -83,6 +83,32 @@ pub fn send_paste() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn send_copy() -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use std::mem::size_of;
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+            SendInput, INPUT, INPUT_0, KEYBDINPUT, KEYEVENTF_KEYUP, VK_CONTROL, VK_C,
+        };
+
+        let inputs = [
+            INPUT { r#type: 1, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL as u16, wScan: 0, dwFlags: 0, time: 0, dwExtraInfo: 0 } } },
+            INPUT { r#type: 1, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C as u16, wScan: 0, dwFlags: 0, time: 0, dwExtraInfo: 0 } } },
+            INPUT { r#type: 1, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C as u16, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } } },
+            INPUT { r#type: 1, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL as u16, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } } },
+        ];
+
+        let sent = unsafe { SendInput(inputs.len() as u32, inputs.as_ptr(), size_of::<INPUT>() as i32) };
+        if sent == inputs.len() as u32 { Ok(()) } else { Err("无法发送复制输入".to_string()) }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Err("当前平台暂不支持系统级复制".to_string())
+    }
+}
+
+#[tauri::command]
 pub fn send_undo() -> Result<(), String> {
     #[cfg(windows)]
     {

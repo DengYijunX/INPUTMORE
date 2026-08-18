@@ -13,6 +13,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             output::capture_foreground_window,
             output::restore_foreground_window,
+            output::send_copy,
             output::send_paste,
             output::send_undo,
         ])
