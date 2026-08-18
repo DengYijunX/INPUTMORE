@@ -20,6 +20,7 @@ import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
 import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
 import { shouldSubmitTextInput } from './application/textInput';
 import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
+import { canStartShortcut } from './application/shortcutAvailability';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -239,7 +240,7 @@ export function App() {
       const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
       if (!sessionEvent) return;
 
-      if (sessionEvent.type === 'shortcut' && (current.tag === 'idle' || current.tag === 'completed')) {
+      if (sessionEvent.type === 'shortcut' && canStartShortcut(current, sessionEvent.action)) {
         const sessionVersion = ++sessionVersionRef.current;
         if (!sessionEvent.targetWindowId) {
           setState({ tag: 'error', action: 'rawWrite', message: '没有可用的输入位置', retryable: true });

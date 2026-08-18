@@ -12,6 +12,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 const RIGHT_ALT_VK: u32 = VK_RMENU as u32;
+const LLKHF_INJECTED: u32 = 0x10;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 static RIGHT_ALT_DOWN: AtomicBool = AtomicBool::new(false);
@@ -47,7 +48,7 @@ unsafe extern "system" fn keyboard_proc(
 ) -> LRESULT {
     if code >= 0 && lparam != 0 {
         let event = &*(lparam as *const KBDLLHOOKSTRUCT);
-        if is_control_key(event.vkCode) {
+        if is_control_key(event.vkCode) && should_track_control(event.flags) {
             match wparam as u32 {
                 WM_KEYDOWN | WM_SYSKEYDOWN => { CONTROL_DOWN.store(true, Ordering::Release); }
                 WM_KEYUP | WM_SYSKEYUP => { CONTROL_DOWN.store(false, Ordering::Release); }
@@ -86,6 +87,10 @@ unsafe extern "system" fn keyboard_proc(
 
 fn is_control_key(vk_code: u32) -> bool {
     matches!(vk_code, 0x11 | 0xA2 | 0xA3)
+}
+
+fn should_track_control(flags: u32) -> bool {
+    flags & LLKHF_INJECTED == 0
 }
 
 fn action_for_right_alt(control_down: bool) -> &'static str {
@@ -140,5 +145,11 @@ mod tests {
     fn maps_ctrl_right_alt_to_selected_text_processing() {
         assert_eq!(super::action_for_right_alt(false), "rawWrite");
         assert_eq!(super::action_for_right_alt(true), "enhance");
+    }
+
+    #[test]
+    fn ignores_injected_keyboard_events_when_tracking_control() {
+        assert!(super::should_track_control(0));
+        assert!(!super::should_track_control(0x10));
     }
 }

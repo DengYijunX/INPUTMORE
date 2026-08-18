@@ -6,6 +6,7 @@ export function createTauriSelectedTextInput(): SelectedTextInputPort {
   return createSelectedTextInput({
     readClipboard: () => readText(),
     writeClipboard: (text) => writeText(text),
+    getClipboardSequence: () => invoke<number>('get_clipboard_sequence'),
     restoreForeground: (id) => invoke('restore_foreground_window', { id }),
     sendCopy: () => invoke('send_copy'),
     waitForCopy: () => new Promise((resolve) => window.setTimeout(resolve, 120)),

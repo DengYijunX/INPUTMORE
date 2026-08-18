@@ -46,4 +46,18 @@ describe('selected text input', () => {
     await expect(input.captureSelectedText({ id: 'window-1' })).rejects.toThrow('复制失败');
     expect(clipboard).toBe('原剪贴板');
   });
+
+  it('does not treat a clipboard content change as selection when its sequence is unchanged', async () => {
+    let clipboard = '原剪贴板';
+    const input = createSelectedTextInput({
+      readClipboard: async () => clipboard,
+      writeClipboard: async (text) => { clipboard = text; },
+      getClipboardSequence: async () => 7,
+      restoreForeground: async () => undefined,
+      sendCopy: async () => { clipboard = '系统残留内容'; },
+      waitForCopy: async () => undefined,
+    });
+
+    await expect(input.captureSelectedText({ id: 'window-1' })).resolves.toBeNull();
+  });
 });

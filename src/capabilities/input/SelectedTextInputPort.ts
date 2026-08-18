@@ -3,6 +3,7 @@ import type { TargetContext } from '../output/TextOutputPort';
 export type SelectedTextInputDependencies = {
   readClipboard: () => Promise<string>;
   writeClipboard: (text: string) => Promise<void>;
+  getClipboardSequence?: () => Promise<number>;
   restoreForeground: (id: string) => Promise<void>;
   sendCopy: () => Promise<void>;
   waitForCopy: () => Promise<void>;
@@ -18,6 +19,7 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
       if (signal?.aborted) return null;
 
       const previous = await deps.readClipboard();
+      const sequenceBefore = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
       let selected = '';
       try {
         if (signal?.aborted) return null;
@@ -27,6 +29,8 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
         await deps.waitForCopy();
         if (signal?.aborted) return null;
         selected = (await deps.readClipboard()).trim();
+        const sequenceAfter = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
+        if (sequenceBefore !== undefined && sequenceAfter === sequenceBefore) return null;
         return selected && selected !== previous.trim() ? selected : null;
       } finally {
         try {

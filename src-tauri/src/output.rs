@@ -19,6 +19,20 @@ pub fn capture_foreground_window() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+pub fn get_clipboard_sequence() -> Result<u32, String> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::DataExchange::GetClipboardSequenceNumber;
+        Ok(unsafe { GetClipboardSequenceNumber() })
+    }
+
+    #[cfg(not(windows))]
+    {
+        Err("当前平台暂不支持读取剪贴板序列号".to_string())
+    }
+}
+
+#[tauri::command]
 pub fn restore_foreground_window(id: String) -> Result<(), String> {
     #[cfg(windows)]
     {
