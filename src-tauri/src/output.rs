@@ -132,6 +132,7 @@ pub fn capture_selected_text(target_window_id: String) -> Result<Option<String>,
 
         let result: Result<Option<String>, String> = (|| {
             let before = clipboard_win::seq_num();
+            wait_for_shortcut_modifiers_release()?;
             restore_foreground_window(target_window_id)?;
             std::thread::sleep(std::time::Duration::from_millis(40));
             send_copy()?;
@@ -170,6 +171,26 @@ pub fn capture_selected_text(target_window_id: String) -> Result<Option<String>,
         let _ = target_window_id;
         Err("当前平台暂不支持读取系统选区".to_string())
     }
+}
+
+fn shortcut_modifiers_released(control_down: bool, right_alt_down: bool) -> bool {
+    !control_down && !right_alt_down
+}
+
+#[cfg(windows)]
+fn wait_for_shortcut_modifiers_release() -> Result<(), String> {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL, VK_RMENU};
+
+    for _ in 0..100 {
+        let control_down = ((unsafe { GetAsyncKeyState(VK_CONTROL as i32) } as i32) & 0x8000) != 0;
+        let right_alt_down = ((unsafe { GetAsyncKeyState(VK_RMENU as i32) } as i32) & 0x8000) != 0;
+        if shortcut_modifiers_released(control_down, right_alt_down) {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+
+    Err("请先松开 Ctrl + 右 Alt 后重试".to_string())
 }
 
 fn fresh_selected_text(
@@ -282,6 +303,13 @@ pub fn send_undo() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn waits_for_both_shortcut_modifiers_to_be_released() {
+        assert!(!super::shortcut_modifiers_released(true, false));
+        assert!(!super::shortcut_modifiers_released(false, true));
+        assert!(super::shortcut_modifiers_released(false, false));
+    }
+
     #[test]
     fn rejects_stale_clipboard_when_copy_only_leaves_the_sentinel() {
         assert_eq!(
