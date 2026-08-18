@@ -15,6 +15,7 @@ import { TextTransformationService } from './capabilities/text/TextTransformatio
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SettingsPage } from './SettingsPage';
 import { ProcessingIndicator } from './presentation/ProcessingIndicator';
+import { formatDuration } from './presentation/formatDuration';
 import type { TextOutputPort, TargetContext } from './capabilities/output/TextOutputPort';
 import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
 import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
@@ -117,12 +118,14 @@ export function App() {
 
     try {
       const transformer = new TextTransformationService(new OpenAICompatibleLlm(llmConfig), llmConfig.model);
+      const startedAt = performance.now();
       const result = await transformer.transform({ action: 'enhance', sourceText }, controller.signal);
+      const durationMs = performance.now() - startedAt;
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       const text = result.text.trim();
       if (!text) throw new Error('LLM 未返回有效文本');
       processingAbortRef.current = undefined;
-      setState({ tag: 'previewing', action: 'enhance', text });
+      setState({ tag: 'previewing', action: 'enhance', text, durationMs });
     } catch (error) {
       processingAbortRef.current = undefined;
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
@@ -381,6 +384,7 @@ export function App() {
             </button>
             <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
             {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
+            {previewExpanded && typeof state.durationMs === 'number' && <p className="preview-duration">处理耗时：{formatDuration(state.durationMs)}</p>}
             <button className="copy-text-button preview-copy-button" type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制文本'}</button>
           </section>
         )}
