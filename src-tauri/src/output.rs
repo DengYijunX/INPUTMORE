@@ -126,17 +126,43 @@ pub fn send_copy() -> Result<(), String> {
 pub fn capture_selected_text(target_window_id: String) -> Result<Option<String>, String> {
     #[cfg(windows)]
     {
-        restore_foreground_window(target_window_id)?;
-        let before = clipboard_win::seq_num();
-        send_copy()?;
+        let previous = read_native_clipboard_text()?;
+        let sentinel = format!("__INPUTMORE_SELECTION_{}__", uuid_like_nonce());
+        write_native_clipboard_text(&sentinel)?;
 
-        for _ in 0..60 {
-            std::thread::sleep(std::time::Duration::from_millis(10));
-            if clipboard_win::seq_num() != before {
-                return read_native_clipboard_text();
+        let result: Result<Option<String>, String> = (|| {
+            let before = clipboard_win::seq_num();
+            restore_foreground_window(target_window_id)?;
+            std::thread::sleep(std::time::Duration::from_millis(40));
+            send_copy()?;
+
+            for _ in 0..80 {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                let after = clipboard_win::seq_num();
+                if after != before {
+                    let copied = read_native_clipboard_text()?.unwrap_or_default();
+                    return Ok(fresh_selected_text(
+                        &copied,
+                        &sentinel,
+                        before.map(|value| value.get()),
+                        after.map(|value| value.get()),
+                    ));
+                }
+            }
+            Ok(None)
+        })();
+
+        let restore_result = match &result {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error.clone()),
+        };
+        if let Ok(current) = read_native_clipboard_text() {
+            if current != previous {
+                let _ = previous.as_deref().map(write_native_clipboard_text).unwrap_or_else(|| write_native_clipboard_text(""));
             }
         }
-        Ok(None)
+        restore_result?;
+        return result;
     }
 
     #[cfg(not(windows))]
@@ -144,6 +170,36 @@ pub fn capture_selected_text(target_window_id: String) -> Result<Option<String>,
         let _ = target_window_id;
         Err("当前平台暂不支持读取系统选区".to_string())
     }
+}
+
+fn fresh_selected_text(
+    copied: &str,
+    sentinel: &str,
+    sequence_before: Option<u32>,
+    sequence_after: Option<u32>,
+) -> Option<String> {
+    let selected = copied.trim();
+    if selected.is_empty() || selected == sentinel {
+        return None;
+    }
+    if sequence_before.is_some() && sequence_before == sequence_after {
+        return None;
+    }
+    Some(selected.to_string())
+}
+
+#[cfg(windows)]
+fn uuid_like_nonce() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| format!("{}", duration.as_nanos()))
+        .unwrap_or_else(|_| "fallback".to_string())
+}
+
+#[cfg(windows)]
+fn write_native_clipboard_text(text: &str) -> Result<(), String> {
+    clipboard_win::set_clipboard_string(text).map_err(|error| error.to_string())
 }
 
 #[cfg(windows)]
@@ -226,6 +282,14 @@ pub fn send_undo() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rejects_stale_clipboard_when_copy_only_leaves_the_sentinel() {
+        assert_eq!(
+            super::fresh_selected_text("__INPUTMORE_SELECTION_test__", "__INPUTMORE_SELECTION_test__", Some(8), Some(9)),
+            None
+        );
+    }
+
     #[test]
     fn converts_html_fragment_to_readable_text() {
         assert_eq!(super::html_fragment_to_text("<p>Hello <b>world</b></p><p>下一段 &amp; 内容</p>"), "Hello world\n下一段 & 内容");
