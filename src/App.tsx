@@ -138,6 +138,35 @@ export function App() {
     await transformTextToPreview(sourceText, sessionVersion, controller);
   };
 
+  const startSelectedTextRewrite = async (target: TargetContext, sessionVersion: number) => {
+    const selectedTextInput = selectedTextInputRef.current;
+    if (!selectedTextInput) {
+      targetRef.current = undefined;
+      setState({ tag: 'error', action: 'enhance', message: '当前环境无法读取选中文字', retryable: false });
+      return;
+    }
+
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    try {
+      const selectedText = await selectedTextInput.captureSelectedText(target, controller.signal);
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      if (!selectedText) {
+        processingAbortRef.current = undefined;
+        targetRef.current = undefined;
+        setState({ tag: 'error', action: 'enhance', message: '未检测到选中文字', retryable: false });
+        return;
+      }
+      targetRef.current = undefined;
+      await transformTextToPreview(selectedText, sessionVersion, controller);
+    } catch (error) {
+      processingAbortRef.current = undefined;
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      console.error('InputMore selected text capture failed', error);
+      setState({ tag: 'error', action: 'enhance', message: '读取选中文字失败', retryable: false });
+    }
+  };
+
   useEffect(() => {
     const saved = loadAsrConfig();
     if (saved) transcriptionRef.current = new TranscriptionService(createAsrProvider(saved));
@@ -205,7 +234,7 @@ export function App() {
     }
 
     let unlisten: (() => void) | undefined;
-    void listen<{ action: 'rawWrite'; phase: 'pressed' | 'released'; targetWindowId?: string }>('inputmore://shortcut', (event) => {
+    void listen<{ action: 'rawWrite' | 'enhance'; phase: 'pressed' | 'released'; targetWindowId?: string }>('inputmore://shortcut', (event) => {
       const current = stateRef.current;
       const sessionEvent = toSessionEvent(event.payload, current.tag === 'recording');
       if (!sessionEvent) return;
@@ -219,6 +248,10 @@ export function App() {
         const target = { id: sessionEvent.targetWindowId };
         targetRef.current = target;
         stopRequestedRef.current = false;
+        if (sessionEvent.action === 'enhance') {
+          void startSelectedTextRewrite(target, sessionVersion);
+          return;
+        }
         const startRecording = () => {
           processingAbortRef.current = undefined;
           setState(reduce(current, sessionEvent));
@@ -229,27 +262,7 @@ export function App() {
             setState({ tag: 'error', action: 'rawWrite', message: error instanceof Error ? error.message : '麦克风不可用', retryable: true });
           });
         };
-
-        const selectionController = new AbortController();
-        processingAbortRef.current = selectionController;
-        const selectedTextInput = selectedTextInputRef.current;
-        if (!selectedTextInput) {
-          startRecording();
-          return;
-        }
-        void selectedTextInput.captureSelectedText(target, selectionController.signal)
-          .then(async (selectedText) => {
-            if (sessionVersion !== sessionVersionRef.current || selectionController.signal.aborted) return;
-            if (!selectedText) {
-              startRecording();
-              return;
-            }
-            targetRef.current = undefined;
-            await transformTextToPreview(selectedText, sessionVersion, selectionController);
-          })
-          .catch(() => {
-            if (sessionVersion === sessionVersionRef.current && !selectionController.signal.aborted) startRecording();
-          });
+        startRecording();
         return;
       }
 

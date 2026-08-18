@@ -15,6 +15,7 @@ const RIGHT_ALT_VK: u32 = VK_RMENU as u32;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 static RIGHT_ALT_DOWN: AtomicBool = AtomicBool::new(false);
+static CONTROL_DOWN: AtomicBool = AtomicBool::new(false);
 
 pub fn install(app: AppHandle) {
     let _ = APP_HANDLE.set(app);
@@ -46,6 +47,13 @@ unsafe extern "system" fn keyboard_proc(
 ) -> LRESULT {
     if code >= 0 && lparam != 0 {
         let event = &*(lparam as *const KBDLLHOOKSTRUCT);
+        if is_control_key(event.vkCode) {
+            match wparam as u32 {
+                WM_KEYDOWN | WM_SYSKEYDOWN => { CONTROL_DOWN.store(true, Ordering::Release); }
+                WM_KEYUP | WM_SYSKEYUP => { CONTROL_DOWN.store(false, Ordering::Release); }
+                _ => {}
+            }
+        }
         if let Some(phase) = phase_for_key_event(event.vkCode, wparam as u32) {
             let should_emit = match phase {
                 "pressed" => !RIGHT_ALT_DOWN.swap(true, Ordering::AcqRel),
@@ -64,7 +72,7 @@ unsafe extern "system" fn keyboard_proc(
                 let _ = app.emit(
                     "inputmore://shortcut",
                     serde_json::json!({
-                        "action": "rawWrite",
+                        "action": if phase == "pressed" { action_for_right_alt(CONTROL_DOWN.load(Ordering::Acquire)) } else { "rawWrite" },
                         "phase": phase,
                         "targetWindowId": target_window_id,
                     }),
@@ -74,6 +82,14 @@ unsafe extern "system" fn keyboard_proc(
     }
 
     CallNextHookEx(null_mut(), code, wparam, lparam)
+}
+
+fn is_control_key(vk_code: u32) -> bool {
+    matches!(vk_code, 0x11 | 0xA2 | 0xA3)
+}
+
+fn action_for_right_alt(control_down: bool) -> &'static str {
+    if control_down { "enhance" } else { "rawWrite" }
 }
 
 fn phase_for_key_event(vk_code: u32, message: u32) -> Option<&'static str> {
@@ -118,5 +134,11 @@ mod tests {
         assert!(!super::should_emit_phase("pressed", &mut is_down));
         assert!(super::should_emit_phase("released", &mut is_down));
         assert!(!super::should_emit_phase("released", &mut is_down));
+    }
+
+    #[test]
+    fn maps_ctrl_right_alt_to_selected_text_processing() {
+        assert_eq!(super::action_for_right_alt(false), "rawWrite");
+        assert_eq!(super::action_for_right_alt(true), "enhance");
     }
 }
