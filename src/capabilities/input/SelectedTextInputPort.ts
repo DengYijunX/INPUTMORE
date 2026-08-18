@@ -14,6 +14,15 @@ export interface SelectedTextInputPort {
 }
 
 export function createSelectedTextInput(deps: SelectedTextInputDependencies): SelectedTextInputPort {
+  const readSequence = async () => {
+    if (!deps.getClipboardSequence) return undefined;
+    try {
+      return await deps.getClipboardSequence();
+    } catch {
+      return undefined;
+    }
+  };
+
   return {
     async captureSelectedText(target, signal) {
       if (signal?.aborted) return null;
@@ -24,7 +33,7 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
       let selected = '';
       try {
         await deps.writeClipboard(sentinel);
-        sequenceBefore = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
+        sequenceBefore = await readSequence();
         if (signal?.aborted) return null;
         await deps.restoreForeground(target.id);
         if (signal?.aborted) return null;
@@ -32,7 +41,7 @@ export function createSelectedTextInput(deps: SelectedTextInputDependencies): Se
         await deps.waitForCopy();
         if (signal?.aborted) return null;
         selected = (await deps.readClipboard()).trim();
-        const sequenceAfter = deps.getClipboardSequence ? await deps.getClipboardSequence() : undefined;
+        const sequenceAfter = await readSequence();
         if (selected === sentinel) return null;
         if (sequenceBefore !== undefined && sequenceAfter === sequenceBefore) return null;
         return selected && selected !== previous.trim() ? selected : null;

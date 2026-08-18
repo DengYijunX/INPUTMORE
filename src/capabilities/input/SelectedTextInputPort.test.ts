@@ -76,4 +76,19 @@ describe('selected text input', () => {
 
     await expect(input.captureSelectedText({ id: 'window-1' })).resolves.toBeNull();
   });
+
+  it('continues with sentinel detection when clipboard sequence lookup is unavailable', async () => {
+    let clipboard = '旧的剪贴板内容';
+    const input = createSelectedTextInput({
+      readClipboard: async () => clipboard,
+      writeClipboard: async (text) => { clipboard = text; },
+      getClipboardSequence: async () => { throw new Error('序列号不可用'); },
+      restoreForeground: async () => undefined,
+      sendCopy: async () => undefined,
+      waitForCopy: async () => undefined,
+    });
+
+    await expect(input.captureSelectedText({ id: 'window-1' })).resolves.toBeNull();
+    expect(clipboard).toBe('旧的剪贴板内容');
+  });
 });
