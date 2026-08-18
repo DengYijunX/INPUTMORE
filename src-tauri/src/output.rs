@@ -151,17 +151,17 @@ fn read_native_clipboard_text() -> Result<Option<String>, String> {
     use clipboard_win::{formats, get, Clipboard, Format};
 
     let _clipboard = Clipboard::new_attempts(10).map_err(|error| error.to_string())?;
-    if clipboard_win::raw::is_format_avail(formats::CF_UNICODETEXT) {
-        let text: String = get(formats::Unicode).map_err(|error| error.to_string())?;
-        return Ok((!text.trim().is_empty()).then_some(text));
-    }
-
     if let Some(html_format) = formats::Html::new() {
         if html_format.is_format_avail() {
             let html: String = get(html_format).map_err(|error| error.to_string())?;
             let text = html_fragment_to_text(&html);
-            return Ok((!text.trim().is_empty()).then_some(text));
+            if !text.trim().is_empty() { return Ok(Some(text)); }
         }
+    }
+
+    if clipboard_win::raw::is_format_avail(formats::CF_UNICODETEXT) {
+        let text: String = get(formats::Unicode).map_err(|error| error.to_string())?;
+        return Ok((!text.trim().is_empty()).then_some(text));
     }
 
     Ok(None)

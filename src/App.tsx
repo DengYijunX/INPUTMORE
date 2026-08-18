@@ -150,6 +150,7 @@ export function App() {
 
     const controller = new AbortController();
     processingAbortRef.current = controller;
+    setState({ tag: 'processing', action: 'enhance', requestId: crypto.randomUUID() });
     try {
       const selectedText = await selectedTextInput.captureSelectedText(target, controller.signal);
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
