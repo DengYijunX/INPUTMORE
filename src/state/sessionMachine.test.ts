@@ -31,10 +31,19 @@ describe('session machine', () => {
 
   it('routes completed Ask work to the answer view', () => {
     const state: SessionState = { tag: 'processing', action: 'ask', requestId: 'req-2' };
-    expect(reduce(state, { type: 'result_ready', text: '答案' })).toEqual({
+    expect(reduce(state, { type: 'result_ready', text: '答案', sources: [{ title: '来源', url: 'https://example.test', snippet: '摘要' }] })).toEqual({
       tag: 'showingAnswer',
       text: '答案',
       requestId: 'req-2',
+      sources: [{ title: '来源', url: 'https://example.test', snippet: '摘要' }],
+    });
+  });
+
+  it('allows the Ask action to enter text input', () => {
+    expect(reduce({ tag: 'idle' }, { type: 'shortcut', action: 'ask', durationMs: 0 })).toEqual({
+      tag: 'recording',
+      action: 'ask',
+      startedAt: expect.any(Number),
     });
   });
 
