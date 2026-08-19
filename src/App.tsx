@@ -1,5 +1,5 @@
 import './App.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import type { SessionState } from './domain/actions';
@@ -10,23 +10,20 @@ import { AudioCapture } from './infrastructure/audio/audioCapture';
 import { TranscriptionService } from './capabilities/transcription/TranscriptionService';
 import { createAsrProvider } from './infrastructure/providers/asr/createAsrProvider';
 import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled } from './infrastructure/config/providerConfig';
-import { loadSearchConfig } from './infrastructure/config/searchConfig';
 import { OpenAICompatibleLlm } from './infrastructure/providers/llm/OpenAICompatibleLlm';
 import { TextTransformationService } from './capabilities/text/TextTransformationService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { SettingsPage } from './SettingsPage';
-import { ProcessingIndicator } from './presentation/ProcessingIndicator';
-import { formatDuration } from './presentation/formatDuration';
 import { createTimingRecord, type TimingFlow } from './application/timing';
 import type { TextOutputPort, TargetContext } from './capabilities/output/TextOutputPort';
 import { createTauriTextOutput } from './infrastructure/output/TauriTextOutput';
-import { COPY_TEXT_LABEL, WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
-import { shouldSubmitTextInput } from './application/textInput';
+import { WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
 import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
 import { canStartShortcut } from './application/shortcutAvailability';
 import { describeSelectionError } from './application/selectionErrors';
-import { RetrievalService } from './capabilities/retrieval/RetrievalService';
-import { ZhipuWebSearch } from './infrastructure/providers/search/ZhipuWebSearch';
+import { runRetrievalFlow } from './application/retrievalFlow';
+import { createConfiguredRetrievalService } from './infrastructure/composition/createRetrievalService';
+import { InputMoreWindow } from './presentation/InputMoreWindow';
+import { SettingsPage } from './SettingsPage';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('window') === 'settings') return <SettingsPage />;
@@ -115,6 +112,21 @@ export function App() {
     setState({ tag: 'textInput', action: 'ask', text: '' });
   };
 
+  const updateTextDraft = (text: string) => {
+    setTextDraft(text);
+    if (state.tag === 'textInput') setState({ tag: 'textInput', action: state.action, text });
+  };
+
+  const submitTextInput = () => {
+    if (state.tag !== 'textInput') return;
+    void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite());
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    void startDragFromPointer(event, () => getCurrentWindow().startDragging())
+      .catch((error) => console.error('InputMore window drag failed', error));
+  };
+
   const transformTextToPreview = async (
     sourceText: string,
     sessionVersion: number,
@@ -172,14 +184,9 @@ export function App() {
   const submitRetrieval = async () => {
     const sourceText = textDraft.trim();
     if (!sourceText) return;
-    const searchConfig = loadSearchConfig();
-    const llmConfig = loadLlmConfig();
-    if (!searchConfig) {
-      setState({ tag: 'error', action: 'ask', message: '网页检索需要先配置 Search Provider', retryable: false });
-      return;
-    }
-    if (!llmConfig) {
-      setState({ tag: 'error', action: 'ask', message: '网页检索需要先配置 LLM Provider', retryable: false });
+    const configured = createConfiguredRetrievalService();
+    if (!configured.ok) {
+      setState({ tag: 'error', action: 'ask', message: configured.message, retryable: false });
       return;
     }
 
@@ -189,12 +196,7 @@ export function App() {
     setCopyFeedback(false);
     setState({ tag: 'processing', action: 'ask', requestId: crypto.randomUUID() });
     try {
-      const service = new RetrievalService({
-        search: new ZhipuWebSearch({ apiKey: searchConfig.apiKey, endpoint: searchConfig.endpoint }),
-        llm: new OpenAICompatibleLlm(llmConfig),
-        model: llmConfig.model,
-      });
-      const result = await service.retrieve(sourceText, controller.signal);
+      const result = await runRetrievalFlow(sourceText, configured.service, controller.signal);
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       processingAbortRef.current = undefined;
       setState({ tag: 'showingAnswer', text: result.answer, requestId: crypto.randomUUID(), sources: result.sources });
@@ -404,74 +406,22 @@ export function App() {
     };
   }, []);
 
-  return (
-    <main className="app-shell" aria-label="InputMore">
-      <section ref={floatingCardRef} className="floating-card" data-testid="capsule" data-state={state.tag === 'transcribing' ? 'processing' : state.tag} data-theme={theme}>
-        <div
-          className="capsule-content"
-          data-tauri-drag-region
-          onPointerDown={(event) => {
-        void startDragFromPointer(event, () => getCurrentWindow().startDragging())
-              .catch((error) => console.error('InputMore window drag failed', error));
-          }}
-        >
-          <span className="mic-icon" aria-hidden="true">♩</span>
-          {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
-          {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
-          <span className="capsule-status" role="status">
-            {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? (state.action === 'ask' ? 'SEARCH' : 'TEXT') : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'showingAnswer' ? 'ANSWER' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
-          </span>
-          {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
-          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="文本转写" onClick={startTextRewrite}>文本</button>}
-          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="网页检索" onClick={startRetrieval}>检索</button>}
-          {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={() => void openSettings()}>⚙</button>}
-          {state.tag === 'completed' && <button className="undo-button" type="button" onClick={undoLastWrite}>撤回</button>}
-          {(state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'showingAnswer' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={cancelCurrentTask}>×</button>}
-        </div>
-        {state.tag === 'textInput' && <section className="text-input-panel" data-testid="text-input-panel">
-          <textarea
-            autoFocus
-            value={textDraft}
-            placeholder={state.action === 'ask' ? '输入要检索的问题' : '输入或粘贴要转写的内容'}
-            onChange={(event) => {
-              setTextDraft(event.target.value);
-              setState({ tag: 'textInput', action: state.action, text: event.target.value });
-            }}
-            onKeyDown={(event) => {
-              if (shouldSubmitTextInput(event)) {
-                event.preventDefault();
-                void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite());
-              } else if (event.key === 'Escape') {
-                event.preventDefault();
-                cancelCurrentTask();
-              }
-            }}
-          />
-          <div className="text-input-footer">
-            <span>Ctrl+Enter 提交</span>
-            <button className="text-submit-button" type="button" disabled={!textDraft.trim()} onClick={() => void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite())}>{state.action === 'ask' ? '检索' : '转写'}</button>
-          </div>
-        </section>}
-        {state.tag === 'error' && <div className="error-actions"><p className="error-message">{state.message}</p>{state.copyText && <button className="copy-text-button" type="button" onClick={() => void copyCurrentErrorText()}>{copyFeedback ? '已复制' : COPY_TEXT_LABEL}</button>}</div>}
-        {state.tag === 'previewing' && (
-          <section className={`preview-panel${previewExpanded ? ' is-expanded' : ''}`} data-testid="preview-panel">
-            <button className="preview-panel-header" type="button" onClick={() => setPreviewExpanded((expanded) => !expanded)} aria-expanded={previewExpanded}>
-              <span>整理结果</span><span>{previewExpanded ? '收起⌃' : '展开⌄'}</span>
-            </button>
-            <p className="preview-text">{previewExpanded ? state.text : `${state.text.slice(0, 34)}${state.text.length > 34 ? '…' : ''}`}</p>
-            {previewExpanded && <p className="preview-hint">文本已整理，当前版本尚未写回输入框</p>}
-            {previewExpanded && typeof state.durationMs === 'number' && <p className="preview-duration">处理耗时：{formatDuration(state.durationMs)}</p>}
-            <button className="copy-text-button preview-copy-button" type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制文本'}</button>
-          </section>
-        )}
-        {state.tag === 'showingAnswer' && (
-          <section className="retrieval-panel" data-testid="retrieval-panel">
-            <header className="retrieval-panel-header"><span>检索结果</span><button type="button" onClick={() => void copyText(state.text)}>{copyFeedback ? '已复制' : '复制答案'}</button></header>
-            <p className="retrieval-answer">{state.text}</p>
-            {!!state.sources?.length && <section className="retrieval-sources"><h3>来源</h3>{state.sources.map((source, index) => <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noreferrer"><strong>[{index + 1}] {source.title}</strong><span>{source.sourceName ?? source.url}</span></a>)}</section>}
-          </section>
-        )}
-      </section>
-    </main>
-  );
+  return <InputMoreWindow
+    state={state}
+    theme={theme}
+    previewExpanded={previewExpanded}
+    copyFeedback={copyFeedback}
+    textDraft={textDraft}
+    floatingCardRef={floatingCardRef}
+    onPreviewToggle={() => setPreviewExpanded((expanded) => !expanded)}
+    onTextDraftChange={updateTextDraft}
+    onTextSubmit={submitTextInput}
+    onStartTextRewrite={startTextRewrite}
+    onStartRetrieval={startRetrieval}
+    onOpenSettings={() => void openSettings()}
+    onCancel={cancelCurrentTask}
+    onUndo={undoLastWrite}
+    onCopy={(text) => void copyText(text)}
+    onPointerDown={handlePointerDown}
+  />;
 }
