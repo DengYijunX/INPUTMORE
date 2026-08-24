@@ -147,13 +147,34 @@ capabilities/
 
 ### Git 提交
 
-使用小而完整的提交：
+所有提交统一使用 Conventional Commits 风格，并使用中文描述：
 
 ```text
-feat(shared): define translation request contract
-feat(translation): add translation service
-feat(retrieval): extract retrieval flow
-test(retrieval): cover cancellation and empty results
+<type>(<scope>): 中文描述
+```
+
+常用类型：
+
+- `feat`：新功能；
+- `fix`：问题修复；
+- `refactor`：重构且不改变行为；
+- `test`：测试变更；
+- `docs`：文档变更；
+- `perf`：性能优化；
+- `chore`：工具、构建或维护性变更。
+
+`scope` 使用具体模块名或能力名，例如 `translation`、`retrieval`、`output`、`state`。
+
+使用小而完整的提交，例如：
+
+```text
+feat(shared): 定义翻译请求契约
+feat(translation): 增加翻译服务
+feat(retrieval): 抽离检索流程
+test(retrieval): 覆盖取消和空结果
+fix(output): 修复文本写回焦点丢失
+refactor(presentation): 拆分浮窗展示组件
+docs(project): 更新开发规范
 ```
 
 每个提交尽量只包含一个层次或一个功能意图。合并前先同步主分支，并运行受影响模块的测试。
