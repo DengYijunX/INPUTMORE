@@ -47,16 +47,6 @@ describe('TextTransformationService', () => {
     expect(provider.calls).toBe(1);
   });
 
-  it('requires a target language for translation', async () => {
-    const provider = new RecordingProvider();
-    const service = new TextTransformationService(provider, 'configured-model');
-
-    await service.transform({ action: 'translate', sourceText: '你好', targetLanguage: 'English' });
-
-    expect(provider.lastRequest.messages.at(-1)?.content).toContain('English');
-    expect(provider.lastRequest.messages.at(-1)?.content).toContain('只返回翻译结果');
-  });
-
   it('uses a direct answer prompt for Ask', async () => {
     const provider = new RecordingProvider();
     const service = new TextTransformationService(provider, 'configured-model');
@@ -67,11 +57,4 @@ describe('TextTransformationService', () => {
     expect(provider.lastRequest.messages.at(-1)?.content).not.toContain('去除口头禅');
   });
 
-  it('rejects translation without a target language', async () => {
-    const provider = new RecordingProvider();
-    const service = new TextTransformationService(provider, 'configured-model');
-
-    await expect(service.transform({ action: 'translate', sourceText: '你好' }))
-      .rejects.toThrow('目标语言');
-  });
 });

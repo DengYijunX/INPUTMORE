@@ -12,3 +12,8 @@ it('uses the compact capsule shell with a theme-aware state marker', () => {
   expect(screen.getByTestId('capsule')).toHaveAttribute('data-state', 'idle');
   expect(screen.getByTestId('capsule')).toHaveAttribute('data-theme', 'dark');
 });
+
+it('exposes a translation entry from the idle capsule', () => {
+  render(<App />);
+  expect(screen.getByRole('button', { name: '翻译' })).toBeInTheDocument();
+});

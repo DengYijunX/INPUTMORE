@@ -22,6 +22,8 @@ import { canStartShortcut } from './application/shortcutAvailability';
 import { describeSelectionError } from './application/selectionErrors';
 import { runRetrievalFlow } from './application/retrievalFlow';
 import { createConfiguredRetrievalService } from './infrastructure/composition/createRetrievalService';
+import { createConfiguredTranslationService } from './infrastructure/composition/createTranslationService';
+import { runTranslationFlow } from './application/translationFlow';
 import { InputMoreWindow } from './presentation/InputMoreWindow';
 import { SettingsPage } from './SettingsPage';
 
@@ -31,6 +33,7 @@ export function App() {
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [textDraft, setTextDraft] = useState('');
+  const [targetLanguage, setTargetLanguage] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const floatingCardRef = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
@@ -65,6 +68,7 @@ export function App() {
     targetRef.current = undefined;
     setPreviewExpanded(false);
     setTextDraft('');
+    setTargetLanguage('');
     setState({ tag: 'idle' });
   };
 
@@ -112,14 +116,26 @@ export function App() {
     setState({ tag: 'textInput', action: 'ask', text: '' });
   };
 
+  const startTranslation = () => {
+    setCopyFeedback(false);
+    setTextDraft('');
+    setTargetLanguage('');
+    setState({ tag: 'textInput', action: 'translate', text: '' });
+  };
+
   const updateTextDraft = (text: string) => {
     setTextDraft(text);
-    if (state.tag === 'textInput') setState({ tag: 'textInput', action: state.action, text });
+    if (state.tag === 'textInput') setState({ tag: 'textInput', action: state.action, text, ...(state.targetLanguage ? { targetLanguage: state.targetLanguage } : {}) });
+  };
+
+  const updateTargetLanguage = (value: string) => {
+    setTargetLanguage(value);
+    if (state.tag === 'textInput' && state.action === 'translate') setState({ ...state, targetLanguage: value });
   };
 
   const submitTextInput = () => {
     if (state.tag !== 'textInput') return;
-    void (state.action === 'ask' ? submitRetrieval() : submitTextRewrite());
+    void (state.action === 'ask' ? submitRetrieval() : state.action === 'translate' ? submitTranslation() : submitTextRewrite());
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -205,6 +221,34 @@ export function App() {
       if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
       console.error('InputMore retrieval failed', error);
       setState({ tag: 'error', action: 'ask', message: error instanceof Error ? error.message : '网页检索失败', retryable: false });
+    }
+  };
+
+  const submitTranslation = async () => {
+    const sourceText = textDraft.trim();
+    const language = targetLanguage.trim();
+    if (!sourceText || !language) return;
+    const configured = createConfiguredTranslationService();
+    if (!configured.ok) {
+      setState({ tag: 'error', action: 'translate', message: configured.message, retryable: false });
+      return;
+    }
+
+    const sessionVersion = ++sessionVersionRef.current;
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+    setPreviewExpanded(false);
+    setState({ tag: 'processing', action: 'translate', requestId: crypto.randomUUID() });
+    try {
+      const result = await runTranslationFlow({ sourceText, targetLanguage: language }, configured.service, controller.signal, () => sessionVersion === sessionVersionRef.current);
+      if (!result || controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      processingAbortRef.current = undefined;
+      setState({ tag: 'previewing', action: 'translate', text: result.text });
+    } catch (error) {
+      processingAbortRef.current = undefined;
+      if (controller.signal.aborted || sessionVersion !== sessionVersionRef.current) return;
+      console.error('InputMore translation failed', error);
+      setState({ tag: 'error', action: 'translate', message: error instanceof Error ? error.message : '翻译失败', retryable: false });
     }
   };
 
@@ -412,12 +456,15 @@ export function App() {
     previewExpanded={previewExpanded}
     copyFeedback={copyFeedback}
     textDraft={textDraft}
+    targetLanguage={targetLanguage}
     floatingCardRef={floatingCardRef}
     onPreviewToggle={() => setPreviewExpanded((expanded) => !expanded)}
     onTextDraftChange={updateTextDraft}
+    onTargetLanguageChange={updateTargetLanguage}
     onTextSubmit={submitTextInput}
     onStartTextRewrite={startTextRewrite}
     onStartRetrieval={startRetrieval}
+    onStartTranslation={startTranslation}
     onOpenSettings={() => void openSettings()}
     onCancel={cancelCurrentTask}
     onUndo={undoLastWrite}

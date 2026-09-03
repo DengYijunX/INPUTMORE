@@ -11,7 +11,7 @@ export type SourceReference = {
 export type SessionState =
   | { tag: 'idle' }
   | { tag: 'recording'; action: Action; startedAt: number }
-  | { tag: 'textInput'; action: 'enhance' | 'ask'; text: string }
+  | { tag: 'textInput'; action: 'enhance' | 'translate' | 'ask'; text: string; targetLanguage?: string }
   | { tag: 'transcribing'; action: Action; audioId: string }
   | { tag: 'processing'; action: Action; requestId: string }
   | { tag: 'writingBack'; action: 'rawWrite' | 'enhance' | 'translate'; text: string }

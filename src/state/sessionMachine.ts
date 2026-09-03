@@ -44,6 +44,8 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
       if (event.type === 'result_ready') {
         return state.action === 'ask'
           ? { tag: 'showingAnswer', text: event.text, requestId: state.requestId, ...(event.sources ? { sources: event.sources } : {}) }
+          : state.action === 'translate'
+            ? { tag: 'previewing', action: 'translate', text: event.text }
           : { tag: 'writingBack', action: state.action, text: event.text };
       }
       if (event.type === 'failed') {

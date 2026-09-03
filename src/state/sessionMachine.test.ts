@@ -39,6 +39,16 @@ describe('session machine', () => {
     });
   });
 
+  it('routes completed translation work to preview instead of write-back', () => {
+    const state: SessionState = { tag: 'processing', action: 'translate', requestId: 'req-translate' };
+
+    expect(reduce(state, { type: 'result_ready', text: 'Translated text' })).toEqual({
+      tag: 'previewing',
+      action: 'translate',
+      text: 'Translated text',
+    });
+  });
+
   it('allows the Ask action to enter text input', () => {
     expect(reduce({ tag: 'idle' }, { type: 'shortcut', action: 'ask', durationMs: 0 })).toEqual({
       tag: 'recording',
