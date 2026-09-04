@@ -69,6 +69,8 @@ body { overflow: hidden; }
 .text-input-panel textarea { width: 100%; min-height: 82px; resize: vertical; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 12px; padding: 9px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
 .text-input-panel textarea:focus { border-color: currentColor; background: rgba(255,255,255,0.14); }
 .text-input-panel textarea::placeholder { color: currentColor; opacity: .5; }
+.target-language-select { width: 100%; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 10px; padding: 8px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 12px; outline: none; }
+.target-language-select:focus { border-color: currentColor; background: rgba(255,255,255,0.14); }
 .text-input-footer { display: flex; align-items: center; justify-content: space-between; color: currentColor; font-size: 10px; opacity: .62; }
 .text-submit-button { border: 1px solid currentColor; border-radius: 999px; padding: 4px 12px; color: inherit; background: rgba(255,255,255,0.14); font: inherit; font-size: 11px; cursor: pointer; }
 .text-submit-button:disabled { cursor: not-allowed; opacity: .4; }
@@ -93,6 +95,14 @@ body { overflow: hidden; }
 .settings-section input, .settings-section select { min-height: 38px; border: 1px solid #d6cbbc; border-radius: 9px; padding: 8px 10px; color: #3d3934; background: rgba(255,255,255,.72); font: inherit; font-weight: 400; }
 .settings-section .save-button { width: max-content; padding: 10px 18px; }
 .settings-section.muted { opacity: .72; }
+.translation-language-list { display: grid; gap: 8px; }
+.translation-language-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid rgba(144, 130, 112, .2); border-radius: 10px; background: rgba(255,255,255,.34); }
+.translation-default-choice { display: flex !important; align-items: center; gap: 8px; font-weight: 500 !important; }
+.translation-default-choice input { width: 16px; min-height: 16px; margin: 0; accent-color: #6e675e; }
+.translation-default-choice small { color: #8a8175; font-size: 11px; font-weight: 500; }
+.remove-language-button, .secondary-button { border: 1px solid #d6cbbc; border-radius: 999px; padding: 7px 11px; color: #625a50; background: rgba(255,255,255,.56); font: inherit; font-size: 12px; cursor: pointer; }
+.remove-language-button:disabled, .secondary-button:disabled { cursor: not-allowed; opacity: .42; }
+.translation-add-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .preview-panel { width: 100%; margin-top: 8px; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 10px 14px 12px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); box-shadow: none; backdrop-filter: blur(16px) saturate(0.8); }
 .preview-panel-header { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 0; padding: 0 0 7px; color: inherit; background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 650; }
 .preview-panel-header span:last-child { opacity: .7; }

@@ -1,5 +1,6 @@
 import type { PointerEvent, RefObject } from 'react';
 import type { SessionState } from '../domain/actions';
+import type { TranslationLanguage } from '../infrastructure/config/translationConfig';
 import { shouldSubmitTextInput } from '../application/textInput';
 import { ProcessingIndicator } from './ProcessingIndicator';
 import { formatDuration } from './formatDuration';
@@ -12,6 +13,7 @@ type InputMoreWindowProps = {
   copyFeedback: boolean;
   textDraft: string;
   targetLanguage: string;
+  translationLanguages: TranslationLanguage[];
   floatingCardRef: RefObject<HTMLElement | null>;
   onPreviewToggle: () => void;
   onTextDraftChange: (value: string) => void;
@@ -34,6 +36,7 @@ export function InputMoreWindow({
   copyFeedback,
   textDraft,
   targetLanguage,
+  translationLanguages,
   floatingCardRef,
   onPreviewToggle,
   onTextDraftChange,
@@ -86,7 +89,7 @@ export function InputMoreWindow({
               }
             }}
           />
-          {state.action === 'translate' && <input className="target-language-input" value={targetLanguage} placeholder="目标语言（必填）" aria-label="目标语言" onChange={(event) => onTargetLanguageChange(event.target.value)} />}
+          {state.action === 'translate' && <select className="target-language-select" value={targetLanguage} aria-label="目标语言" onChange={(event) => onTargetLanguageChange(event.target.value)}><option value="">选择目标语言</option>{translationLanguages.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</select>}
           <div className="text-input-footer">
             <span>Ctrl+Enter 提交</span>
             <button className="text-submit-button" type="button" disabled={!textDraft.trim() || (state.action === 'translate' && !targetLanguage.trim())} onClick={onTextSubmit}>{state.action === 'ask' ? '检索' : state.action === 'translate' ? '翻译' : '转写'}</button>

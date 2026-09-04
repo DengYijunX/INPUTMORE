@@ -24,6 +24,7 @@ import { runRetrievalFlow } from './application/retrievalFlow';
 import { createConfiguredRetrievalService } from './infrastructure/composition/createRetrievalService';
 import { createConfiguredTranslationService } from './infrastructure/composition/createTranslationService';
 import { runTranslationFlow } from './application/translationFlow';
+import { loadTranslationConfig } from './infrastructure/config/translationConfig';
 import { InputMoreWindow } from './presentation/InputMoreWindow';
 import { SettingsPage } from './SettingsPage';
 
@@ -34,6 +35,7 @@ export function App() {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [textDraft, setTextDraft] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('');
+  const [translationConfig, setTranslationConfig] = useState(() => loadTranslationConfig());
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const floatingCardRef = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
@@ -68,7 +70,7 @@ export function App() {
     targetRef.current = undefined;
     setPreviewExpanded(false);
     setTextDraft('');
-    setTargetLanguage('');
+    setTargetLanguage(translationConfig.defaultLanguage);
     setState({ tag: 'idle' });
   };
 
@@ -117,9 +119,11 @@ export function App() {
   };
 
   const startTranslation = () => {
+    const latestTranslationConfig = loadTranslationConfig();
     setCopyFeedback(false);
     setTextDraft('');
-    setTargetLanguage('');
+    setTranslationConfig(latestTranslationConfig);
+    setTargetLanguage(latestTranslationConfig.defaultLanguage);
     setState({ tag: 'textInput', action: 'translate', text: '' });
   };
 
@@ -457,6 +461,7 @@ export function App() {
     copyFeedback={copyFeedback}
     textDraft={textDraft}
     targetLanguage={targetLanguage}
+    translationLanguages={translationConfig.languages}
     floatingCardRef={floatingCardRef}
     onPreviewToggle={() => setPreviewExpanded((expanded) => !expanded)}
     onTextDraftChange={updateTextDraft}

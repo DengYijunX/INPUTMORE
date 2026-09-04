@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { getProviderPreset, PROVIDER_PRESETS } from './infrastructure/providers/providerPresets';
 import { loadAsrConfig, loadLlmConfig, loadRawWriteLlmEnabled, saveAsrConfig, saveLlmConfig, saveRawWriteLlmEnabled, type AsrConfig, type LlmConfig } from './infrastructure/config/providerConfig';
 import { loadSearchConfig, saveSearchConfig, type SearchConfig } from './infrastructure/config/searchConfig';
+import { addTranslationLanguage, AVAILABLE_TRANSLATION_LANGUAGES, loadTranslationConfig, removeTranslationLanguage, saveTranslationConfig, setDefaultTranslationLanguage, type TranslationConfig } from './infrastructure/config/translationConfig';
 
 export function SettingsPage() {
   const [asrConfig, setAsrConfig] = useState<AsrConfig>(() => loadAsrConfig() ?? {
@@ -18,9 +19,19 @@ export function SettingsPage() {
     providerId: 'zhipu-web-search', endpoint: 'https://open.bigmodel.cn/api/paas/v4/web_search', apiKey: '',
   });
   const [searchSaved, setSearchSaved] = useState(false);
+  const [translationConfig, setTranslationConfig] = useState<TranslationConfig>(() => loadTranslationConfig());
+  const [translationLanguageToAdd, setTranslationLanguageToAdd] = useState('');
+  const [translationSaved, setTranslationSaved] = useState(false);
   const updateProvider = (providerId: string) => {
     const preset = getProviderPreset(providerId);
     if (preset) setAsrConfig((current) => ({ ...current, providerId, baseUrl: preset.baseUrl, model: preset.defaultModel }));
+  };
+  const addLanguage = () => {
+    const language = AVAILABLE_TRANSLATION_LANGUAGES.find(({ code }) => code === translationLanguageToAdd);
+    if (!language) return;
+    setTranslationConfig((current) => addTranslationLanguage(current, language));
+    setTranslationLanguageToAdd('');
+    setTranslationSaved(false);
   };
   return <main className="settings-page">
     <header><div><p className="eyebrow">INPUTMORE</p><h1>设置</h1><p className="page-description">配置语音识别、模型与输入行为。</p></div></header>
@@ -51,6 +62,24 @@ export function SettingsPage() {
         <label>API 地址<input value={searchConfig.endpoint} onChange={(event) => setSearchConfig({ ...searchConfig, endpoint: event.target.value })} /></label>
         <label>API Key<input type="password" value={searchConfig.apiKey} onChange={(event) => setSearchConfig({ ...searchConfig, apiKey: event.target.value })} placeholder="只保存在本机" /></label>
         <button className="save-button" type="submit">{searchSaved ? '已保存' : '保存检索配置'}</button>
+      </form>
+    </section>
+    <section className="settings-section"><h2>翻译目标语言</h2><p>管理翻译时快速选择的常用目标语言，最多保存 3 个。</p>
+      <form onSubmit={(event) => { event.preventDefault(); saveTranslationConfig(translationConfig); setTranslationSaved(true); }}>
+        <div className="translation-language-list">
+          {translationConfig.languages.map((language) => <div className="translation-language-row" key={language.code}>
+            <label className="translation-default-choice"><input type="radio" name="translation-default" aria-label={`设为默认 ${language.label}`} checked={translationConfig.defaultLanguage === language.code} onChange={() => { setTranslationConfig((current) => setDefaultTranslationLanguage(current, language.code)); setTranslationSaved(false); }} /><span>{language.label}</span>{translationConfig.defaultLanguage === language.code && <small>默认</small>}</label>
+            <button type="button" className="remove-language-button" aria-label={`删除 ${language.label}`} disabled={translationConfig.languages.length <= 1} onClick={() => { setTranslationConfig((current) => removeTranslationLanguage(current, language.code)); setTranslationSaved(false); }}>删除</button>
+          </div>)}
+        </div>
+        <div className="translation-add-row">
+          <select aria-label="添加目标语言" value={translationLanguageToAdd} onChange={(event) => setTranslationLanguageToAdd(event.target.value)}>
+            <option value="">选择语言</option>
+            {AVAILABLE_TRANSLATION_LANGUAGES.filter(({ code }) => !translationConfig.languages.some((language) => language.code === code)).map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
+          </select>
+          <button type="button" className="secondary-button" disabled={!translationLanguageToAdd || translationConfig.languages.length >= 3} onClick={addLanguage}>添加语言</button>
+        </div>
+        <button className="save-button" type="submit">{translationSaved ? '已保存' : '保存翻译配置'}</button>
       </form>
     </section>
     <section className="settings-section muted"><h2>更多设置</h2><p>快捷键、输出行为、历史记录和文本模型配置将在后续版本加入。</p></section>
