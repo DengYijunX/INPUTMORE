@@ -1,5 +1,6 @@
 import type { LlmProvider } from '../../infrastructure/providers/llm/LlmProvider';
 import type { SearchProvider, SearchResult } from './SearchProvider';
+import { buildRetrievalPrompt, formatRetrievalSources, RETRIEVAL_SYSTEM_PROMPT } from './retrievalPrompts';
 
 export type RetrievalResult = {
   answer: string;
@@ -25,11 +26,11 @@ export class RetrievalService {
       messages: [
         {
           role: 'system',
-          content: '你是一个谨慎的网页检索问答助手。只能基于提供的来源回答，不要编造事实；在相关陈述后使用 [1]、[2] 等标注来源；如果来源不足以支持结论，要明确说明。只返回答案正文。',
+            content: RETRIEVAL_SYSTEM_PROMPT,
         },
         {
           role: 'user',
-          content: `${normalizedQuery}\n\n可用来源：\n${formatSources(sources)}`,
+          content: buildRetrievalPrompt(normalizedQuery, formatRetrievalSources(sources)),
         },
       ],
       temperature: 0.2,
@@ -40,12 +41,4 @@ export class RetrievalService {
     if (!answer) throw new Error('LLM 未返回有效检索答案');
     return { answer, sources };
   }
-}
-
-function formatSources(sources: SearchResult[]): string {
-  return sources.map((source, index) => [
-    `[${index + 1}] ${source.title}`,
-    source.url,
-    source.snippet,
-  ].join('\n')).join('\n\n');
 }

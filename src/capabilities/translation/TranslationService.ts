@@ -1,4 +1,5 @@
 import type { LlmProvider } from '../../infrastructure/providers/llm/LlmProvider';
+import { buildTranslationPrompt, TRANSLATION_SYSTEM_PROMPT } from './translationPrompts';
 
 export type TranslationRequest = {
   sourceText: string;
@@ -20,17 +21,13 @@ export class TranslationService {
     if (!sourceText) throw new Error('翻译内容不能为空');
     if (!targetLanguage) throw new Error('翻译任务需要目标语言');
 
-    const sourceLanguage = request.sourceLanguage?.trim();
-    const languageHint = sourceLanguage ? `源语言：${sourceLanguage}\n` : '';
-    const instruction = request.instruction?.trim();
-    const instructionHint = instruction ? `\n额外翻译指令：${instruction}` : '';
     const response = await this.provider.generate({
       model: this.model,
       messages: [
-        { role: 'system', content: '你是一个准确、克制的翻译助手。' },
+        { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `将以下内容翻译成${targetLanguage}。\n${languageHint}保留原意；保留语气和格式；不添加解释；只返回翻译结果。${instructionHint}\n\n原文：\n${sourceText}`,
+          content: buildTranslationPrompt({ ...request, sourceText, targetLanguage }),
         },
       ],
       temperature: 0.2,
