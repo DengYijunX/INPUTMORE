@@ -27,4 +27,32 @@ describe('translation settings', () => {
     expect(screen.getByText('已保存')).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('inputmore.translation.config') ?? '{}')).toMatchObject({ defaultLanguage: 'fr-FR' });
   });
+
+  it('does not render existing provider API keys and preserves them when unchanged', () => {
+    localStorage.setItem('inputmore.asr.config', JSON.stringify({ providerId: 'qwen3-asr-flash', baseUrl: 'https://asr.example', model: 'asr', apiKey: 'asr-secret' }));
+    localStorage.setItem('inputmore.llm.config', JSON.stringify({ providerId: 'deepseek', baseUrl: 'https://llm.example', model: 'llm', apiKey: 'llm-secret' }));
+    localStorage.setItem('inputmore.search.config', JSON.stringify({ providerId: 'zhipu-web-search', endpoint: 'https://search.example', apiKey: 'search-secret' }));
+
+    render(<SettingsPage />);
+
+    const apiKeyInputs = document.querySelectorAll<HTMLInputElement>('input[type="password"]');
+    expect([...apiKeyInputs].map((input) => input.value)).toEqual(['', '', '']);
+    expect([...apiKeyInputs].map((input) => input.placeholder)).toEqual([
+      '已配置，输入新密钥替换',
+      '已配置，输入新密钥替换',
+      '已配置，输入新密钥替换',
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存文本模型配置' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存检索配置' }));
+
+    expect(JSON.parse(localStorage.getItem('inputmore.asr.config') ?? '{}').apiKey).toBe('asr-secret');
+    expect(JSON.parse(localStorage.getItem('inputmore.llm.config') ?? '{}').apiKey).toBe('llm-secret');
+    expect(JSON.parse(localStorage.getItem('inputmore.search.config') ?? '{}').apiKey).toBe('search-secret');
+
+    fireEvent.change(apiKeyInputs[0], { target: { value: 'new-asr-secret' } });
+    fireEvent.click(screen.getAllByRole('button', { name: '已保存' })[0]);
+    expect(JSON.parse(localStorage.getItem('inputmore.asr.config') ?? '{}').apiKey).toBe('new-asr-secret');
+  });
 });
