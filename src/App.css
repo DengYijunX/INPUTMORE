@@ -73,7 +73,7 @@ body { overflow: hidden; }
 .copy-text-button:hover { background: rgba(255,255,255,0.22); opacity: 1; }
 .floating-card { overflow: hidden; }
 .capsule-content { min-width: 0; flex-wrap: nowrap; }
-.text-input-panel { display: grid; gap: 8px; min-width: 0; max-width: 100%; margin: 0 14px 12px 46px; }
+.text-input-panel { display: grid; gap: 8px; min-width: 0; max-width: 100%; margin: 0 14px 12px; }
 .text-input-panel textarea { width: 100%; min-width: 0; max-width: 100%; min-height: 82px; max-height: 180px; resize: none; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(211, 201, 187, .58) transparent; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 12px; padding: 9px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
 .text-input-panel textarea::-webkit-scrollbar { width: 6px; }
 .text-input-panel textarea::-webkit-scrollbar-track { background: transparent; }
