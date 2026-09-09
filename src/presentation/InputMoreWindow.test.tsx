@@ -90,6 +90,14 @@ describe('idle capability controls', () => {
   });
 });
 
+describe('recording state', () => {
+  it('shows an animated waveform and REC status', () => {
+    render(<InputMoreWindow state={{ tag: 'recording', action: 'rawWrite', startedAt: 0 }} {...baseProps} />);
+    expect(screen.getByRole('status')).toHaveTextContent('REC');
+    expect(screen.getByTestId('recording-waveform')).toBeInTheDocument();
+  });
+});
+
 describe('floating panel boundaries', () => {
   it('keeps translation submit disabled for empty source text', () => {
     renderTranslationWindow({ textDraft: ' ', targetLanguage: 'zh-CN' });

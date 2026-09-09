@@ -33,11 +33,11 @@ body { overflow: hidden; }
 .floating-card[data-state='recording'], .floating-card[data-state='processing'], .floating-card[data-state='completed'], .floating-card[data-state='error'], .floating-card[data-state='previewing'] { border-radius: 24px; }
 .floating-card:has(.settings-panel) { min-width: 340px; border-radius: 24px; }
 
-.capsule-content { 
+.capsule-content {
   display: flex;
   align-items: center;
   min-height: 44px;
-  gap: 12px;
+  gap: 8px;
   padding: 0 12px 0 16px;
   cursor: grab;
   user-select: none;
@@ -49,12 +49,17 @@ body { overflow: hidden; }
 .waveform i:nth-child(2), .waveform i:nth-child(6) { height: 14px; }
 .waveform i:nth-child(3), .waveform i:nth-child(5) { height: 20px; }
 .waveform i:nth-child(4) { height: 27px; }
+.recording-waveform i { transform-origin: center; animation: inputmore-wave 780ms ease-in-out infinite; }
+.recording-waveform i:nth-child(1), .recording-waveform i:nth-child(7) { animation-delay: -520ms; }
+.recording-waveform i:nth-child(2), .recording-waveform i:nth-child(6) { animation-delay: -390ms; }
+.recording-waveform i:nth-child(3), .recording-waveform i:nth-child(5) { animation-delay: -260ms; }
+.recording-waveform i:nth-child(4) { animation-delay: -130ms; }
 
-.capsule-status { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; }
+.capsule-status { flex: 0 0 auto; margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; }
 .floating-card[data-state='idle'] .capsule-status { margin-left: 0; }
 .cancel-button { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
 .settings-button { display: grid; width: 36px; min-height: 36px; flex: 0 0 auto; place-items: center; border: 0; border-left: 1px solid rgba(211, 201, 187, .32); padding-left: 10px; color: inherit; background: transparent; opacity: 0.68; cursor: pointer; font-size: 16px; }
-.capability-button { display: inline-flex; min-width: 62px; min-height: 36px; align-items: center; justify-content: center; gap: 5px; border: 1px solid rgba(211, 201, 187, .5); border-radius: 999px; padding: 5px 10px; color: inherit; background: rgba(255,255,255,.07); font: inherit; font-size: 12px; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease; }
+.capability-button { display: inline-flex; width: 58px; height: 58px; flex: 0 0 58px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid rgba(211, 201, 187, .5); border-radius: 50%; padding: 5px 3px; color: inherit; background: rgba(255,255,255,.07); font: inherit; font-size: 11px; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease; }
 .capability-button:hover, .capability-button[data-interaction='hover'], .capability-button:focus-visible, .capability-button[data-interaction='focus'] { color: #fffaf2; background: rgba(255,255,255,.22); border-color: rgba(247,242,233,.78); }
 .capability-button:focus-visible, .capability-button[data-interaction='focus'] { outline: 2px solid rgba(247,242,233,.78); outline-offset: 2px; }
 .capability-icon { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -127,4 +132,5 @@ body { overflow: hidden; }
 .processing-dots i:nth-child(2) { animation-delay: .16s; }
 .processing-dots i:nth-child(3) { animation-delay: .32s; }
 @keyframes inputmore-pulse { 0%, 80%, 100% { transform: scale(.7); opacity: .35; } 40% { transform: scale(1); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .processing-dots i { animation: none; opacity: .72; } }
+@keyframes inputmore-wave { 0%, 100% { transform: scaleY(.45); opacity: .58; } 50% { transform: scaleY(1.35); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .processing-dots i, .recording-waveform i { animation: none; opacity: .72; } }

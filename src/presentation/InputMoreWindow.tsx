@@ -60,7 +60,7 @@ export function InputMoreWindow({
           data-tauri-drag-region
           onPointerDown={onPointerDown}
         >
-          {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
+          {state.tag !== 'idle' && <span className={state.tag === 'recording' ? 'waveform recording-waveform' : 'waveform'} data-testid={state.tag === 'recording' ? 'recording-waveform' : undefined} aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? (state.action === 'ask' ? 'SEARCH' : state.action === 'translate' ? 'TRANSLATE' : 'TEXT') : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'showingAnswer' ? 'ANSWER' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>

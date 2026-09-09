@@ -13,10 +13,10 @@
 ## 文件边界
 
 - Create: `src/presentation/CapabilityIcon.tsx` — 文本、翻译、检索三种内联 SVG 图标，仅负责展示。
-- Modify: `src/presentation/InputMoreWindow.tsx` — 去掉音符和 `InputMore`，替换初始态入口按钮，补齐语义化 focus 状态和稳定的内容区结构。
+- Modify: `src/presentation/InputMoreWindow.tsx` — 去掉音符和 `InputMore`，使用完整 READY 与圆形竖排入口，补齐录音波形和 focus 状态。
 - Modify: `src/App.css` — 统一浮窗、入口按钮、输入区、结果区的尺寸和溢出规则；使用原有暖灰色系提亮 hover/focus。
 - Modify: `src/App.test.tsx` — 更新空闲态断言，验证旧装饰元素不再渲染、入口图标和按钮可访问。
-- Modify: `src/presentation/InputMoreWindow.test.tsx` — 增加 hover/focus、空输入、翻译语言选择和长内容展示测试。
+- Modify: `src/presentation/InputMoreWindow.test.tsx` — 增加 READY 不收缩、录音波形、hover/focus、空输入、翻译语言选择和长内容展示测试。
 - Create: `changelog/2026-09-09-010-floating-overlay-ux.md` — 记录本次前端体验优化。
 
 不修改：`src/domain`、`src/state`、`src/application`、`src/capabilities`、`src/infrastructure`、`src/SettingsPage.tsx`、检索 Provider 和检索流程。
@@ -58,6 +58,13 @@ it('uses the same warm highlight for hover and keyboard focus', () => {
   expect(button).toHaveAttribute('data-interaction', 'hover');
   fireEvent.focus(button);
   expect(button).toHaveAttribute('data-interaction', 'focus');
+});
+
+it('keeps READY visible and renders the recording waveform state', () => {
+  render(<InputMoreWindow state={{ tag: 'recording', startedAt: 0 }} {...baseProps} />);
+  expect(screen.getByRole('status')).toHaveTextContent('REC');
+  expect(screen.getByTestId('recording-waveform')).toBeInTheDocument();
+  expect(screen.getByTestId('capsule')).toHaveAttribute('data-state', 'recording');
 });
 ```
 
