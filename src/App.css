@@ -30,7 +30,7 @@ body { overflow: hidden; }
   color: #35322f;
 }
 
-.floating-card[data-state='recording'], .floating-card[data-state='processing'], .floating-card[data-state='completed'], .floating-card[data-state='error'], .floating-card[data-state='previewing'] { border-radius: 24px; }
+.floating-card[data-state='recording'], .floating-card[data-state='textInput'], .floating-card[data-state='processing'], .floating-card[data-state='completed'], .floating-card[data-state='error'], .floating-card[data-state='previewing'] { border-radius: 24px; }
 .floating-card:has(.settings-panel) { min-width: 340px; border-radius: 24px; }
 
 .capsule-content {
