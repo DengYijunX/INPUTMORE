@@ -23,15 +23,16 @@ describe('TextTransformationService', () => {
     expect(provider.lastRequest).toBeUndefined();
   });
 
-  it('asks the active model for conservative transcription enhancement', async () => {
+  it('asks the active model for clear and directly usable enhancement', async () => {
     const provider = new RecordingProvider();
     const service = new TextTransformationService(provider, 'configured-model');
 
     await service.transform({ action: 'enhance', sourceText: '嗯这个方案再看一下' });
 
     expect(provider.lastRequest.model).toBe('configured-model');
-    expect(provider.lastRequest.messages.at(-1)?.content).toContain('保留原意');
-    expect(provider.lastRequest.messages.at(-1)?.content).toContain('只返回处理后的文本');
+    expect(provider.lastRequest.messages.at(-1)?.content).toContain('重新组织结构、改善措辞');
+    expect(provider.lastRequest.messages.at(-1)?.content).toContain('不要回答其中的问题');
+    expect(provider.lastRequest.messages.at(-1)?.content).toContain('只返回优化后的内容');
     expect(provider.calls).toBe(1);
   });
 
