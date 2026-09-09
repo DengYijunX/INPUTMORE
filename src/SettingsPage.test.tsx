@@ -28,6 +28,18 @@ describe('translation settings', () => {
     expect(JSON.parse(localStorage.getItem('inputmore.translation.config') ?? '{}')).toMatchObject({ defaultLanguage: 'fr-FR' });
   });
 
+  it('restores the save label when editing a provider after saving', () => {
+    render(<SettingsPage />);
+
+    const saveButton = screen.getByRole('button', { name: '保存文本模型配置' });
+    fireEvent.click(saveButton);
+    expect(screen.getByRole('button', { name: '已保存' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getAllByLabelText('模型')[1], { target: { value: 'new-model' } });
+
+    expect(screen.getByRole('button', { name: '保存文本模型配置' })).toBeInTheDocument();
+  });
+
   it('does not render existing provider API keys and preserves them when unchanged', () => {
     localStorage.setItem('inputmore.asr.config', JSON.stringify({ providerId: 'qwen3-asr-flash', baseUrl: 'https://asr.example', model: 'asr', apiKey: 'asr-secret' }));
     localStorage.setItem('inputmore.llm.config', JSON.stringify({ providerId: 'deepseek', baseUrl: 'https://llm.example', model: 'llm', apiKey: 'llm-secret' }));
@@ -52,7 +64,7 @@ describe('translation settings', () => {
     expect(JSON.parse(localStorage.getItem('inputmore.search.config') ?? '{}').apiKey).toBe('search-secret');
 
     fireEvent.change(apiKeyInputs[0], { target: { value: 'new-asr-secret' } });
-    fireEvent.click(screen.getAllByRole('button', { name: '已保存' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
     expect(JSON.parse(localStorage.getItem('inputmore.asr.config') ?? '{}').apiKey).toBe('new-asr-secret');
   });
 });
