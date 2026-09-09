@@ -5,6 +5,7 @@ import { shouldSubmitTextInput } from '../application/textInput';
 import { ProcessingIndicator } from './ProcessingIndicator';
 import { formatDuration } from './formatDuration';
 import { COPY_TEXT_LABEL } from './errorCopy';
+import { CapabilityIcon } from './CapabilityIcon';
 
 type InputMoreWindowProps = {
   state: SessionState;
@@ -59,16 +60,14 @@ export function InputMoreWindow({
           data-tauri-drag-region
           onPointerDown={onPointerDown}
         >
-          <span className="mic-icon" aria-hidden="true">♩</span>
           {state.tag !== 'idle' && <span className="waveform" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></span>}
-          {state.tag === 'idle' && <span className="idle-label">InputMore</span>}
           <span className="capsule-status" role="status">
             {state.tag === 'recording' ? 'REC' : state.tag === 'textInput' ? (state.action === 'ask' ? 'SEARCH' : state.action === 'translate' ? 'TRANSLATE' : 'TEXT') : state.tag === 'transcribing' || state.tag === 'processing' ? 'PROCESSING' : state.tag === 'writingBack' ? 'WRITING' : state.tag === 'previewing' ? 'PREVIEW' : state.tag === 'showingAnswer' ? 'ANSWER' : state.tag === 'completed' ? 'DONE' : state.tag === 'error' ? 'ERROR' : 'READY'}
           </span>
           {(state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack') && <ProcessingIndicator />}
-          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="文本转写" onClick={onStartTextRewrite}>文本</button>}
-          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="翻译" onClick={onStartTranslation}>翻译</button>}
-          {state.tag === 'idle' && <button className="text-input-button" type="button" aria-label="网页检索" onClick={onStartRetrieval}>检索</button>}
+          {state.tag === 'idle' && <button className="capability-button" type="button" aria-label="文本转写" onMouseEnter={(event) => { event.currentTarget.dataset.interaction = 'hover'; }} onMouseLeave={(event) => { delete event.currentTarget.dataset.interaction; }} onFocus={(event) => { event.currentTarget.dataset.interaction = 'focus'; }} onBlur={(event) => { delete event.currentTarget.dataset.interaction; }} onClick={onStartTextRewrite}><CapabilityIcon name="text" /><span>文本</span></button>}
+          {state.tag === 'idle' && <button className="capability-button" type="button" aria-label="翻译" onMouseEnter={(event) => { event.currentTarget.dataset.interaction = 'hover'; }} onMouseLeave={(event) => { delete event.currentTarget.dataset.interaction; }} onFocus={(event) => { event.currentTarget.dataset.interaction = 'focus'; }} onBlur={(event) => { delete event.currentTarget.dataset.interaction; }} onClick={onStartTranslation}><CapabilityIcon name="translation" /><span>翻译</span></button>}
+          {state.tag === 'idle' && <button className="capability-button" type="button" aria-label="网页检索" onMouseEnter={(event) => { event.currentTarget.dataset.interaction = 'hover'; }} onMouseLeave={(event) => { delete event.currentTarget.dataset.interaction; }} onFocus={(event) => { event.currentTarget.dataset.interaction = 'focus'; }} onBlur={(event) => { delete event.currentTarget.dataset.interaction; }} onClick={onStartRetrieval}><CapabilityIcon name="retrieval" /><span>检索</span></button>}
           {state.tag === 'idle' && <button className="settings-button" type="button" aria-label="设置" onClick={onOpenSettings}>⚙</button>}
           {state.tag === 'completed' && <button className="undo-button" type="button" onClick={onUndo}>撤回</button>}
           {(state.tag === 'textInput' || state.tag === 'transcribing' || state.tag === 'processing' || state.tag === 'writingBack' || state.tag === 'previewing' || state.tag === 'showingAnswer' || state.tag === 'error') && <button className="cancel-button" type="button" aria-label="取消" onClick={onCancel}>×</button>}
