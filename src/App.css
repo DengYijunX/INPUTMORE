@@ -129,7 +129,7 @@ body { overflow: hidden; }
 .preview-text::-webkit-scrollbar-track { background: transparent; }
 .preview-text::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(211, 201, 187, .58); }
 .preview-text::-webkit-scrollbar-thumb:hover { background: rgba(247, 242, 233, .78); }
-.preview-panel.is-expanded .preview-text { max-height: 136px; overflow-y: auto; overflow-x: hidden; }
+.preview-panel.is-expanded .preview-text { max-height: 176px; overflow-y: auto; overflow-x: hidden; }
 .retrieval-panel { width: 100%; min-width: 0; max-width: 100%; margin-top: 8px; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 12px 14px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); backdrop-filter: blur(16px) saturate(0.8); max-height: min(62vh, 520px); overflow-y: auto; overflow-x: hidden; }
 .retrieval-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 650; }
 .retrieval-panel-header button { border: 1px solid currentColor; border-radius: 999px; padding: 5px 9px; color: inherit; background: transparent; cursor: pointer; font: inherit; font-size: 11px; }
@@ -139,7 +139,8 @@ body { overflow: hidden; }
 .retrieval-sources a { display: grid; gap: 3px; margin: 7px 0; color: inherit; text-decoration: none; font-size: 11px; }
 .retrieval-sources a:hover { text-decoration: underline; }
 .retrieval-sources a span { opacity: .62; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.preview-hint { margin: 8px 0 0; color: currentColor; font-size: 11px; opacity: .58; }
+.preview-hint { margin: 6px 0 0; color: currentColor; font-size: 10px; line-height: 1.35; opacity: .58; }
+.preview-duration { margin: 4px 0 0; color: currentColor; font-size: 10px; line-height: 1.2; opacity: .48; }
 .processing-indicator { display: inline-flex; align-items: center; width: 26px; color: currentColor; opacity: .72; }
 .processing-dots { display: inline-flex; align-items: center; gap: 3px; }
 .processing-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: inputmore-pulse 1.1s ease-in-out infinite; }
