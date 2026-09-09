@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import type { ComponentProps } from 'react';
 import type { TranslationLanguage } from '../infrastructure/config/translationConfig';
 import { InputMoreWindow } from './InputMoreWindow';
 
@@ -7,6 +8,32 @@ const languages: TranslationLanguage[] = [
   { code: 'en-US', label: '英语（美国）' },
   { code: 'zh-CN', label: '简体中文' },
 ];
+
+const baseProps: Omit<ComponentProps<typeof InputMoreWindow>, 'state'> = {
+  theme: 'dark',
+  previewExpanded: false,
+  copyFeedback: false,
+  textDraft: '',
+  targetLanguage: 'en-US',
+  translationLanguages: languages,
+  floatingCardRef: { current: null },
+  onPreviewToggle: vi.fn(),
+  onTextDraftChange: vi.fn(),
+  onTargetLanguageChange: vi.fn(),
+  onTextSubmit: vi.fn(),
+  onStartTextRewrite: vi.fn(),
+  onStartRetrieval: vi.fn(),
+  onStartTranslation: vi.fn(),
+  onOpenSettings: vi.fn(),
+  onCancel: vi.fn(),
+  onUndo: vi.fn(),
+  onCopy: vi.fn(),
+  onPointerDown: vi.fn(),
+};
+
+function renderIdleWindow() {
+  return render(<InputMoreWindow state={{ tag: 'idle' }} {...baseProps} />);
+}
 
 describe('translation input selector', () => {
   it('shows the current language and reports a quick language change', () => {
@@ -38,5 +65,23 @@ describe('translation input selector', () => {
     expect(selector).toHaveValue('en-US');
     fireEvent.change(selector, { target: { value: 'zh-CN' } });
     expect(onTargetLanguageChange).toHaveBeenCalledWith('zh-CN');
+  });
+});
+
+describe('idle capability controls', () => {
+  it('shows a semantic icon for each idle capability button', () => {
+    renderIdleWindow();
+    expect(screen.getByTestId('capability-icon-text')).toBeInTheDocument();
+    expect(screen.getByTestId('capability-icon-translation')).toBeInTheDocument();
+    expect(screen.getByTestId('capability-icon-retrieval')).toBeInTheDocument();
+  });
+
+  it('uses the same warm highlight for hover and keyboard focus', () => {
+    renderIdleWindow();
+    const button = screen.getByRole('button', { name: '翻译' });
+    fireEvent.mouseEnter(button);
+    expect(button).toHaveAttribute('data-interaction', 'hover');
+    fireEvent.focus(button);
+    expect(button).toHaveAttribute('data-interaction', 'focus');
   });
 });
