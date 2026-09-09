@@ -116,4 +116,12 @@ describe('floating panel boundaries', () => {
     expect(screen.getByText('翻译失败')).toBeInTheDocument();
     expect(screen.queryByText(/API Key|stack|Provider response/i)).not.toBeInTheDocument();
   });
+
+  it('renders preview content as a read-only panel with copy action', () => {
+    render(<InputMoreWindow state={{ tag: 'previewing', action: 'translate', text: '翻译结果内容' }} {...baseProps} previewExpanded />);
+    expect(screen.getByText('翻译结果')).toBeInTheDocument();
+    expect(screen.getByText('翻译结果内容')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '复制文本' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
 });
