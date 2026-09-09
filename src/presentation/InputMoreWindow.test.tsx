@@ -35,6 +35,10 @@ function renderIdleWindow() {
   return render(<InputMoreWindow state={{ tag: 'idle' }} {...baseProps} />);
 }
 
+function renderTranslationWindow(overrides: { textDraft?: string; targetLanguage?: string } = {}) {
+  return render(<InputMoreWindow state={{ tag: 'textInput', action: 'translate', text: '' }} {...baseProps} {...overrides} />);
+}
+
 describe('translation input selector', () => {
   it('shows the current language and reports a quick language change', () => {
     const onTargetLanguageChange = vi.fn();
@@ -83,5 +87,25 @@ describe('idle capability controls', () => {
     expect(button).toHaveAttribute('data-interaction', 'hover');
     fireEvent.focus(button);
     expect(button).toHaveAttribute('data-interaction', 'focus');
+  });
+});
+
+describe('floating panel boundaries', () => {
+  it('keeps translation submit disabled for empty source text', () => {
+    renderTranslationWindow({ textDraft: ' ', targetLanguage: 'zh-CN' });
+    expect(screen.getByRole('button', { name: '翻译' })).toBeDisabled();
+  });
+
+  it('renders long preview text inside a bounded result panel', () => {
+    render(<InputMoreWindow state={{ tag: 'previewing', action: 'translate', text: '长文本'.repeat(200) }} {...baseProps} />);
+    const panel = screen.getByTestId('preview-panel');
+    expect(panel).toHaveClass('preview-panel');
+    expect(screen.getByText('翻译结果')).toBeInTheDocument();
+  });
+
+  it('renders a user-facing error without exposing provider details', () => {
+    render(<InputMoreWindow state={{ tag: 'error', action: 'translate', message: '翻译失败', retryable: false }} {...baseProps} />);
+    expect(screen.getByText('翻译失败')).toBeInTheDocument();
+    expect(screen.queryByText(/API Key|stack|Provider response/i)).not.toBeInTheDocument();
   });
 });
