@@ -74,7 +74,11 @@ body { overflow: hidden; }
 .floating-card { overflow: hidden; }
 .capsule-content { min-width: 0; flex-wrap: nowrap; }
 .text-input-panel { display: grid; gap: 8px; min-width: 0; max-width: 100%; margin: 0 14px 12px 46px; }
-.text-input-panel textarea { width: 100%; min-width: 0; max-width: 100%; min-height: 82px; resize: vertical; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 12px; padding: 9px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
+.text-input-panel textarea { width: 100%; min-width: 0; max-width: 100%; min-height: 82px; max-height: 180px; resize: none; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(211, 201, 187, .58) transparent; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 12px; padding: 9px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
+.text-input-panel textarea::-webkit-scrollbar { width: 6px; }
+.text-input-panel textarea::-webkit-scrollbar-track { background: transparent; }
+.text-input-panel textarea::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(211, 201, 187, .58); }
+.text-input-panel textarea::-webkit-scrollbar-thumb:hover { background: rgba(247, 242, 233, .78); }
 .text-input-panel textarea:focus { border-color: currentColor; background: rgba(255,255,255,0.14); }
 .text-input-panel textarea::placeholder { color: currentColor; opacity: .5; }
 .target-language-select { width: 100%; min-width: 0; max-width: 100%; border: 1px solid rgba(211, 201, 187, 0.52); border-radius: 10px; padding: 8px 10px; color: inherit; background: rgba(255,255,255,0.1); font: inherit; font-size: 12px; outline: none; }
