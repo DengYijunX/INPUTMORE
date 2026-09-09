@@ -121,11 +121,15 @@ body { overflow: hidden; }
 .remove-language-button, .secondary-button { border: 1px solid #d6cbbc; border-radius: 999px; padding: 7px 11px; color: #625a50; background: rgba(255,255,255,.56); font: inherit; font-size: 12px; cursor: pointer; }
 .remove-language-button:disabled, .secondary-button:disabled { cursor: not-allowed; opacity: .42; }
 .translation-add-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.preview-panel { width: 100%; min-width: 0; max-width: 100%; max-height: min(62vh, 520px); margin-top: 8px; overflow: hidden; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 10px 14px 12px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); box-shadow: none; backdrop-filter: blur(16px) saturate(0.8); }
+.preview-panel { width: 100%; min-width: 0; max-width: 100%; margin-top: 8px; overflow: hidden; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 10px 14px 12px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); box-shadow: none; backdrop-filter: blur(16px) saturate(0.8); }
 .preview-panel-header { display: flex; width: 100%; min-height: 28px; align-items: center; justify-content: space-between; border: 0; border-bottom: 1px solid rgba(247, 242, 233, .18); padding: 0 0 7px; color: inherit; background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 650; }
 .preview-panel-header span:last-child { opacity: .7; }
-.preview-text { max-height: 34px; margin: 9px 0 0; overflow: hidden; border: 1px solid rgba(211, 201, 187, .24); border-radius: 10px; padding: 9px 10px; color: currentColor; background: rgba(255,255,255,.06); font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
-.preview-panel.is-expanded .preview-text { max-height: 136px; overflow-y: auto; }
+.preview-text { max-height: 34px; margin: 9px 0 0; overflow: hidden; border: 1px solid rgba(211, 201, 187, .24); border-radius: 10px; padding: 9px 10px; color: currentColor; background: rgba(255,255,255,.06); font-size: 13px; line-height: 1.5; white-space: pre-wrap; scrollbar-width: thin; scrollbar-color: rgba(211, 201, 187, .58) transparent; }
+.preview-text::-webkit-scrollbar { width: 6px; }
+.preview-text::-webkit-scrollbar-track { background: transparent; }
+.preview-text::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(211, 201, 187, .58); }
+.preview-text::-webkit-scrollbar-thumb:hover { background: rgba(247, 242, 233, .78); }
+.preview-panel.is-expanded .preview-text { max-height: 136px; overflow-y: auto; overflow-x: hidden; }
 .retrieval-panel { width: 100%; min-width: 0; max-width: 100%; margin-top: 8px; border: 1px solid rgba(211, 201, 187, 0.5); border-radius: 18px; padding: 12px 14px; color: #f7f2e9; background: rgba(78, 74, 67, 0.76); backdrop-filter: blur(16px) saturate(0.8); max-height: min(62vh, 520px); overflow-y: auto; overflow-x: hidden; }
 .retrieval-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 650; }
 .retrieval-panel-header button { border: 1px solid currentColor; border-radius: 999px; padding: 5px 9px; color: inherit; background: transparent; cursor: pointer; font: inherit; font-size: 11px; }
