@@ -20,6 +20,7 @@ import { WRITEBACK_FAILURE_COPY } from './presentation/errorCopy';
 import { createTauriSelectedTextInput } from './infrastructure/input/TauriSelectedTextInput';
 import { canStartShortcut } from './application/shortcutAvailability';
 import { describeSelectionError } from './application/selectionErrors';
+import { getFloatingWindowHeight } from './presentation/windowResize';
 import { runRetrievalFlow } from './application/retrievalFlow';
 import { createConfiguredRetrievalService } from './infrastructure/composition/createRetrievalService';
 import { createConfiguredTranslationService } from './infrastructure/composition/createTranslationService';
@@ -315,7 +316,9 @@ export function App() {
       frame = requestAnimationFrame(() => {
         const card = floatingCardRef.current;
         if (!card || resizing) return;
-        const contentHeight = Math.ceil(card.getBoundingClientRect().height + 20);
+        const cardHeight = card.getBoundingClientRect().height;
+        const documentHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+        const contentHeight = getFloatingWindowHeight(cardHeight, documentHeight);
         resizing = true;
         const windowHandle = getCurrentWindow();
         void windowHandle.setResizable(true)
