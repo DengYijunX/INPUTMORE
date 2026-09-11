@@ -4,6 +4,10 @@
 >
 > **让每一次输入都拥有更多可能。**
 
+![Platform](https://img.shields.io/badge/platform-Windows%20first-6e675e?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-c9a879?style=flat-square)
+![Status](https://img.shields.io/badge/status-early%20release-e7d4b3?style=flat-square)
+
 InputMore 是一个轻量的桌面 AI 输入增强层：把语音、文本或选中文字处理成可以直接使用的内容。语音输入和文本整理是核心能力，翻译和偶尔的信息检索是辅助能力。
 
 > **当前状态：** Windows 早期版本，项目开源并持续迭代。
@@ -19,7 +23,7 @@ InputMore 是一个轻量的桌面 AI 输入增强层：把语音、文本或选
 
 ## 快速开始
 
-1. 从 [GitHub Releases](../../releases) 下载最新 Windows 版本；
+1. 发布安装包后从 [GitHub Releases](../../releases) 下载；当前也可以按[首次使用指南](docs/getting-started.md)从源码运行；
 2. 打开设置，配置语音识别 Provider；
 3. 如需整理、翻译或检索，再配置 OpenAI-compatible 文本模型；
 4. 在任意输入框按 **右 Alt** 开始录音，再按一次结束并写回；

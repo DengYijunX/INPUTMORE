@@ -6,6 +6,10 @@
   <p><a href="README.zh-CN.md">中文</a> · <a href="docs/getting-started.md">Quick start</a> · <a href="docs/product-status-and-roadmap.md">Roadmap</a> · <a href="CONTRIBUTING.md">Contributing</a></p>
 </div>
 
+![Platform](https://img.shields.io/badge/platform-Windows%20first-6e675e?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-c9a879?style=flat-square)
+![Status](https://img.shields.io/badge/status-early%20release-e7d4b3?style=flat-square)
+
 InputMore helps you turn voice, text, and selected content into something ready to use in the app you already have open. Voice typing and text enhancement are the core experience; translation and occasional web answers are supporting tools.
 
 > **Status:** early Windows release. The project is open source and actively evolving.
@@ -31,13 +35,15 @@ Typing is often the slowest part of expressing a thought. InputMore stays close 
 
 ## Quick start
 
-1. Download the latest Windows build from [Releases](../../releases).
+1. Download a Windows build from [Releases](../../releases) when a packaged release is published, or run from source using the [Getting started](docs/getting-started.md) guide.
 2. Open **Settings** and configure an ASR provider.
 3. Configure an OpenAI-compatible text model for enhancement, translation, or Ask.
 4. Focus any text field and press **Right Alt** to record; press it again to stop and write the transcription.
 5. Select text and press **Ctrl + Right Alt** to enhance the selection.
 
 For development setup, provider configuration, permissions, and troubleshooting, see [Getting started](docs/getting-started.md).
+
+![InputMore input enhancement flow](assets/inputmore-flow.svg)
 
 ## Privacy and data flow
 
