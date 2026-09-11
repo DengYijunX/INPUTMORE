@@ -17,8 +17,9 @@
   <g filter="url(#shadow)" font-family="Inter,Segoe UI,Arial,sans-serif">
     <rect x="80" y="330" width="300" height="190" rx="22" fill="#f4efe7"/>
     <text x="115" y="380" font-size="18" fill="#8a8175" letter-spacing="2">INPUT</text>
-    <text x="115" y="432" font-size="30" font-weight="700" fill="#3d3934">Voice · Text · Selection</text>
-    <text x="115" y="476" font-size="17" fill="#6e675e">Your words, in your workflow</text>
+    <text x="115" y="425" font-size="27" font-weight="700" fill="#3d3934">Voice · Text</text>
+    <text x="115" y="459" font-size="27" font-weight="700" fill="#3d3934">Selection</text>
+    <text x="115" y="493" font-size="16" fill="#6e675e">Your words, in your workflow</text>
     <rect x="550" y="285" width="300" height="280" rx="28" fill="#6e675e" stroke="#e7d4b3" stroke-opacity=".6"/>
     <text x="600" y="345" font-size="18" fill="#e7d4b3" letter-spacing="2">INPUTMORE</text>
     <text x="600" y="405" font-size="34" font-weight="700" fill="#fffaf2">AI input layer</text>
