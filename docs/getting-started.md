@@ -15,6 +15,17 @@ npm install
 npm run tauri dev
 ```
 
+## Build a Windows installer
+
+To create the first distributable Windows installer, run:
+
+```powershell
+npm run tauri build
+```
+
+The NSIS installer is generated under `src-tauri/target/release/bundle/nsis/`.
+The build uses the configured local providers at runtime; it does not package API keys.
+
 Before opening a pull request, run:
 
 ```powershell

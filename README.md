@@ -35,13 +35,15 @@ Typing is often the slowest part of expressing a thought. InputMore stays close 
 
 ## Quick start
 
-1. Download a Windows build from [Releases](../../releases) when a packaged release is published, or run from source using the [Getting started](docs/getting-started.md) guide.
+1. Download a Windows installer from [Releases](../../releases) when a packaged release is published, or run from source using the [Getting started](docs/getting-started.md) guide.
 2. Open **Settings** and configure an ASR provider.
 3. Configure an OpenAI-compatible text model for enhancement, translation, or Ask.
 4. Focus any text field and press **Right Alt** to record; press it again to stop and write the transcription.
 5. Select text and press **Ctrl + Right Alt** to enhance the selection.
 
 For development setup, provider configuration, permissions, and troubleshooting, see [Getting started](docs/getting-started.md).
+
+To build a local Windows installer, run `npm run tauri build`. The NSIS output is written to `src-tauri/target/release/bundle/nsis/`.
 
 ## See it in action
 

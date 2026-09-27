@@ -31,6 +31,8 @@ InputMore 是一个轻量的桌面 AI 输入增强层：把语音、文本或选
 
 详细说明见 [首次使用指南](docs/getting-started.md)。
 
+本地生成 Windows 安装包：运行 `npm run tauri build`，NSIS 安装包会生成在 `src-tauri/target/release/bundle/nsis/`。
+
 ## 实际效果
 
 浮窗保持在当前工作流旁边，语音输入完成后可以继续预览、复制或写回当前应用。
