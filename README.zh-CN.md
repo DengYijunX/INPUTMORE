@@ -31,6 +31,12 @@ InputMore 是一个轻量的桌面 AI 输入增强层：把语音、文本或选
 
 详细说明见 [首次使用指南](docs/getting-started.md)。
 
+## 实际效果
+
+浮窗保持在当前工作流旁边，语音输入完成后可以继续预览、复制或写回当前应用。
+
+![InputMore 桌面演示](assets/inputmore-demo.gif)
+
 ## 隐私边界
 
 InputMore 不提供自有托管 AI 服务。音频、文本和问题只会发送到你为对应功能配置的 Provider。API Key 保存在本机，不应提交到仓库或发到公开 Issue。检索结果默认只在浮窗中展示，不会自动写回输入框。

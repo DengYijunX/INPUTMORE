@@ -43,6 +43,12 @@ Typing is often the slowest part of expressing a thought. InputMore stays close 
 
 For development setup, provider configuration, permissions, and troubleshooting, see [Getting started](docs/getting-started.md).
 
+## See it in action
+
+The floating capsule stays close to your current workflow while voice input is captured and routed to the active app.
+
+![InputMore desktop demo](assets/inputmore-demo.gif)
+
 ![InputMore input enhancement flow](assets/inputmore-flow.svg)
 
 ## Privacy and data flow
