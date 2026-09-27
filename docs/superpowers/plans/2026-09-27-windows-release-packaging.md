@@ -54,3 +54,11 @@
 
 - [x] Review `git diff` and `git status`.
 - [x] Commit with `chore(release): 配置 Windows 安装包`.
+
+### Follow-up: Hide the release console window
+
+**Files:**
+- Modify: `src-tauri/src/main.rs`
+
+- [x] Enable the Windows GUI subsystem for non-debug builds.
+- [x] Rebuild the NSIS installer and verify the release binary is marked as a Windows GUI application.
